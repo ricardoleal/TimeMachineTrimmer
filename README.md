@@ -4,17 +4,17 @@
 
 # TimeMachineTrimmer
 
-A lightweight macOS utility to trim old Time Machine backups and reclaim disk space. Still in early development — suggestions and contributions welcome.
+Trim old Time Machine backups and reclaim disk space.
 
-> ⬇️ Download from [releases](https://github.com/ricardoleal/TimeMachineTrimmer/releases/latest).
+<img src="TimeMachineTrimmer.png" width="720" alt="TimeMachineTrimmer screenshot">
 
-![Header](.github/banner.svg)
+## Features
 
-## Download
+- **Trim snapshots** — delete old backups from any Time Machine volume
+- **Reclaim space** — remove unwanted snapshots and free up disk
+- **macOS-native** — lightweight, native SwiftUI app
 
-### GitHub Releases
-
-Download the latest `.dmg` from the [Releases Section](https://github.com/ricardoleal/TimeMachineTrimmer/releases/latest).
+## Install
 
 ### Homebrew
 
@@ -24,45 +24,28 @@ brew trust ricardoleal/tap/time-machine-trimmer
 brew install --cask time-machine-trimmer
 ```
 
-> **Gatekeeper**: The app is not signed with a paid Apple Developer ID certificate. If macOS blocks it on first launch, right-click the app in `/Applications` and select **Open**, then click **Open** in the dialog.
+> [!NOTE]
+> `brew trust` is required because the tap is private. If you don't have `gh` installed, pass your token manually:
+> `HOMEBREW_GITHUB_API_TOKEN=ghp_xxx brew tap ricardoleal/tap`
 
-## Features
+### Manual
 
-* Trim old backups from any Time Machine volume
-* Reclaim disk space by removing snapshots you don't need
-* Fast, safe, and macOS-native
+Download the latest `.dmg` from [Releases](https://github.com/ricardoleal/TimeMachineTrimmer/releases/latest), open it, and drag the app to `/Applications`.
+
+> [!WARNING]
+> The app is not signed with a paid Apple Developer ID certificate. If macOS blocks it, right-click the app in `/Applications` and select **Open**, then click **Open** in the dialog.
+
+## Build from Source
+
+Open `TimeMachineTrimmer.xcodeproj` in **Xcode 26+** on macOS 26 (Tahoe).
+
+> [!IMPORTANT]
+> Change the signing team to your own, otherwise entitlements may not persist.
 
 ## Contributing
 
-Have a look at [open issues](https://github.com/ricardoleal/TimeMachineTrimmer/issues) or open a [new one](https://github.com/ricardoleal/TimeMachineTrimmer/issues/new) to discuss ideas.
-
-> Please do not create pull requests for new features without discussing it first.
-
-When submitting a pull request, make sure you are on a feature branch in your fork.
-
-## Publishing
-
-```bash
-# 1. Tag the release
-git tag v1.0.0 && git push origin v1.0.0
-
-# 2. CI builds unsigned DMG & creates GitHub Release
-
-# 3. Build & sign locally with your cert
-./.scripts/build.sh
-
-# 4. Upload the signed .app from build/ to the Release manually
-```
-
-## Development Setup
-
-Clone the repository and open in **Xcode** on macOS 26 (Tahoe).
-
-> **Warning**
-> Make sure you change the signing team to your own, otherwise entitlements may not persist.
-
-Then build and run with the `Run` button.
+Have an idea or found a bug? Open an [issue](https://github.com/ricardoleal/TimeMachineTrimmer/issues/new) first to discuss before sending a pull request. Please submit PRs from a feature branch on your fork.
 
 ## License
 
-See `LICENSE` file in the root of the repository.
+See [LICENSE](LICENSE).
