@@ -16,6 +16,16 @@ A lightweight macOS utility to trim old Time Machine backups and reclaim disk sp
 
 Download the latest `.dmg` from the [Releases Section](https://github.com/ricardoleal/TimeMachineTrimmer/releases/latest).
 
+### Homebrew
+
+```bash
+HOMEBREW_GITHUB_API_TOKEN=$(gh auth token) brew tap ricardoleal/tap
+brew trust ricardoleal/tap/time-machine-trimmer
+brew install --cask time-machine-trimmer
+```
+
+> `HOMEBREW_GITHUB_API_TOKEN` is required because the tap repository is private.
+
 ## Features
 
 * Trim old backups from any Time Machine volume
