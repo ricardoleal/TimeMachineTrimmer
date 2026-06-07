@@ -36,13 +36,13 @@ actor TMUtilService {
         process.standardError = errorPipe
 
         return try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { p in
+            process.terminationHandler = { proc in
                 let out = outputPipe.fileHandleForReading.readDataToEndOfFile()
                 let err = errorPipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: out, encoding: .utf8) ?? ""
                 let error = String(data: err, encoding: .utf8) ?? ""
 
-                if p.terminationStatus == 0 {
+                if proc.terminationStatus == 0 {
                     continuation.resume(returning: output.trimmingCharacters(in: .whitespacesAndNewlines))
                 } else {
                     let msg = error.isEmpty ? output : error
@@ -73,13 +73,13 @@ actor TMUtilService {
             process.standardOutput = outPipe
             process.standardError = errPipe
 
-            process.terminationHandler = { p in
+            process.terminationHandler = { proc in
                 let out = outPipe.fileHandleForReading.readDataToEndOfFile()
                 let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: out, encoding: .utf8) ?? ""
                 let errorOutput = String(data: errData, encoding: .utf8) ?? ""
 
-                if p.terminationStatus == 0 {
+                if proc.terminationStatus == 0 {
                     continuation.resume(returning: output.trimmingCharacters(in: .whitespacesAndNewlines))
                 } else {
                     let combined = errorOutput.isEmpty ? output : errorOutput
@@ -155,7 +155,11 @@ actor TMUtilService {
             let output = String(data: data, encoding: .utf8) ?? ""
             return parseBackupStatus(output)
         } catch {
-            return BackupStatus(running: false, firstBackup: false, phase: "", percent: 0, timeRemaining: 0, files: 0, totalFiles: 0)
+            return BackupStatus(
+                running: false, firstBackup: false,
+                phase: "", percent: 0, timeRemaining: 0,
+                files: 0, totalFiles: 0
+            )
         }
     }
 
@@ -167,7 +171,12 @@ actor TMUtilService {
         let timeRemaining = TimeInterval(extractTMValue(from: output, key: "TimeRemaining") ?? "") ?? 0
         let files = Int(extractTMValue(from: output, key: "files") ?? "") ?? 0
         let totalFiles = Int(extractTMValue(from: output, key: "totalFiles") ?? "") ?? 0
-        return BackupStatus(running: running, firstBackup: firstBackup, phase: phase, percent: percent, timeRemaining: timeRemaining, files: files, totalFiles: totalFiles)
+        return BackupStatus(
+            running: running, firstBackup: firstBackup,
+            phase: phase, percent: percent,
+            timeRemaining: timeRemaining,
+            files: files, totalFiles: totalFiles
+        )
     }
 
     private static func extractTMValue(from output: String, key: String) -> String? {
@@ -223,11 +232,11 @@ actor TMUtilService {
             let kind = entry["Kind"] as? String ?? "Local"
 
             // Try MountPoint from plist first
-            if let mp = (entry["MountPoint"] as? String) ?? (entry["mountPoint"] as? String),
-               !mp.isEmpty {
+            if let mountPoint = (entry["MountPoint"] as? String) ?? (entry["mountPoint"] as? String),
+               !mountPoint.isEmpty {
                 var isDir: ObjCBool = false
-                if FileManager.default.fileExists(atPath: mp, isDirectory: &isDir), isDir.boolValue {
-                    return BackupDestination(id: id, name: name, kind: kind, mountPoint: mp)
+                if FileManager.default.fileExists(atPath: mountPoint, isDirectory: &isDir), isDir.boolValue {
+                    return BackupDestination(id: id, name: name, kind: kind, mountPoint: mountPoint)
                 }
             }
 
@@ -267,15 +276,15 @@ actor TMUtilService {
         var backups = try await listBackupsViaAPFS(mountPoint: mountPoint)
         let hasFDA = TMUtilService.checkFDA()
         if hasFDA, let tmutilPaths = try? await listTmutilPaths(mountPoint: mountPoint) {
-            for i in backups.indices {
-                if let match = tmutilPaths.first(where: { abs($0.date.timeIntervalSince(backups[i].date)) < 120 }) {
-                    backups[i] = TimeMachineBackup(
-                        id: backups[i].id,
-                        date: backups[i].date,
+            for index in backups.indices {
+                if let match = tmutilPaths.first(where: { abs($0.date.timeIntervalSince(backups[index].date)) < 120 }) {
+                    backups[index] = TimeMachineBackup(
+                        id: backups[index].id,
+                        date: backups[index].date,
                         path: match.path,
-                        volumeName: backups[i].volumeName,
-                        snapshotName: backups[i].snapshotName,
-                        volumePath: backups[i].volumePath
+                        volumeName: backups[index].volumeName,
+                        snapshotName: backups[index].snapshotName,
+                        volumePath: backups[index].volumePath
                     )
                 }
             }
@@ -405,14 +414,18 @@ actor TMUtilService {
         guard let regex = try? NSRegularExpression(pattern: pattern),
               let match = regex.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
               match.numberOfRanges >= 5 else { return nil }
-        let ns = name as NSString
-        let y = ns.substring(with: match.range(at: 1))
-        let m = ns.substring(with: match.range(at: 2))
-        let d = ns.substring(with: match.range(at: 3))
-        let t = ns.substring(with: match.range(at: 4))
-        var dc = DateComponents()
-        dc.year = Int(y); dc.month = Int(m); dc.day = Int(d)
-        dc.hour = Int(String(t.prefix(2))); dc.minute = Int(String(t.dropFirst(2).prefix(2))); dc.second = Int(String(t.dropFirst(4).prefix(2)))
-        return Calendar.current.date(from: dc)
+        let nsName = name as NSString
+        let yearStr = nsName.substring(with: match.range(at: 1))
+        let monthStr = nsName.substring(with: match.range(at: 2))
+        let dayStr = nsName.substring(with: match.range(at: 3))
+        let timeStr = nsName.substring(with: match.range(at: 4))
+        var dateComponents = DateComponents()
+        dateComponents.year = Int(yearStr)
+        dateComponents.month = Int(monthStr)
+        dateComponents.day = Int(dayStr)
+        dateComponents.hour = Int(String(timeStr.prefix(2)))
+        dateComponents.minute = Int(String(timeStr.dropFirst(2).prefix(2)))
+        dateComponents.second = Int(String(timeStr.dropFirst(4).prefix(2)))
+        return Calendar.current.date(from: dateComponents)
     }
 }

@@ -54,6 +54,10 @@ type_body_length:
   warning: 400
   error: 500
 
+file_length:
+  warning: 500
+  error: 600
+
 nesting:
   type_level: 2
 
