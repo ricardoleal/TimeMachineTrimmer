@@ -45,7 +45,21 @@ Open `TimeMachineTrimmer.xcodeproj` in **Xcode 26+** on macOS 26 (Tahoe).
 
 ## Contributing
 
-Have an idea or found a bug? Open an [issue](https://github.com/ricardoleal/TimeMachineTrimmer/issues/new) first to discuss before sending a pull request. Please submit PRs from a feature branch on your fork.
+Have an idea or found a bug? We'd love your contribution! 
+
+### Quick Start
+1. **Fork** this repository
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Make your changes** and test thoroughly
+4. **Push to your fork** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request** from your fork to `main`
+
+### Guidelines
+- **Discuss first** — Open an [issue](https://github.com/ricardoleal/TimeMachineTrimmer/issues/new) to discuss your idea before starting work
+- **Follow the template** — Our PR template will guide you through the submission process
+- **Keep it focused** — One feature or fix per PR
+
+For detailed instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
