@@ -35,20 +35,12 @@ actor TMUtilService {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
 
-        print("[run] \(executable) \(args.joined(separator: " "))")
-
         return try await withCheckedThrowingContinuation { continuation in
             process.terminationHandler = { p in
                 let out = outputPipe.fileHandleForReading.readDataToEndOfFile()
                 let err = errorPipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: out, encoding: .utf8) ?? ""
                 let error = String(data: err, encoding: .utf8) ?? ""
-                let outPreview = output.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200)
-                let errPreview = error.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200)
-
-                print("[run] exit=\(p.terminationStatus)")
-                if !outPreview.isEmpty { print("[run] stdout: \(outPreview)") }
-                if !errPreview.isEmpty { print("[run] stderr: \(errPreview)") }
 
                 if p.terminationStatus == 0 {
                     continuation.resume(returning: output.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -60,7 +52,6 @@ actor TMUtilService {
             do {
                 try process.run()
             } catch {
-                print("[run] launch error: \(error.localizedDescription)")
                 continuation.resume(throwing: TMError.processFailed(error.localizedDescription))
             }
         }
@@ -72,8 +63,6 @@ actor TMUtilService {
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
         let script = "do shell script \"\(escaped)\" with administrator privileges"
-        print("[runPrivileged] \(script)")
-
         return try await withCheckedThrowingContinuation { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
@@ -93,7 +82,6 @@ actor TMUtilService {
                 if p.terminationStatus == 0 {
                     continuation.resume(returning: output.trimmingCharacters(in: .whitespacesAndNewlines))
                 } else {
-                    print("[runPrivileged] error: \(errorOutput)")
                     let combined = errorOutput.isEmpty ? output : errorOutput
                     if combined.localizedCaseInsensitiveContains("cancelled") ||
                        combined.localizedCaseInsensitiveContains("User canceled") ||
@@ -129,12 +117,9 @@ actor TMUtilService {
             let err = errPipe.fileHandleForReading.readDataToEndOfFile()
             let errorOutput = String(data: err, encoding: .utf8) ?? ""
             let status = process.terminationStatus
-            if !errorOutput.isEmpty { print("[FDA] stderr: \(errorOutput)") }
-            print("[FDA] exit=\(status) hasFDA=\(status==0 && !errorOutput.contains("Full Disk Access"))")
             if errorOutput.contains("Full Disk Access") { return false }
             return status == 0
         } catch {
-            print("[FDA] launch error: \(error.localizedDescription)")
             return false
         }
     }
@@ -281,12 +266,7 @@ actor TMUtilService {
     func listBackups(mountPoint: String) async throws -> [TimeMachineBackup] {
         var backups = try await listBackupsViaAPFS(mountPoint: mountPoint)
         let hasFDA = TMUtilService.checkFDA()
-        print("[listBackups] FDA=\(hasFDA)")
         if hasFDA, let tmutilPaths = try? await listTmutilPaths(mountPoint: mountPoint) {
-            print("[listBackups] \(tmutilPaths.count) tmutil paths")
-            let matched = tmutilPaths.filter { t in backups.contains(where: { abs($0.date.timeIntervalSince(t.date)) < 120 }) }
-            print("[listBackups] \(matched.count) matched by date")
-            if let first = tmutilPaths.first { print("[listBackups] first path: \(first.path)") }
             for i in backups.indices {
                 if let match = tmutilPaths.first(where: { abs($0.date.timeIntervalSince(backups[i].date)) < 120 }) {
                     backups[i] = TimeMachineBackup(
@@ -299,41 +279,27 @@ actor TMUtilService {
                     )
                 }
             }
-        } else {
-            print("[listBackups] no tmutil paths (FDA=\(hasFDA) or no matches)")
-            if hasFDA { print("[listBackups] tmutilPaths returned nil") }
         }
         return backups
     }
 
     private func listTmutilPaths(mountPoint: String) async throws -> [(path: String, date: Date)] {
-        print("[listTmutilPaths] calling tmutil listbackups -d \(mountPoint)")
         let output = try await run("/usr/bin/tmutil", args: ["listbackups", "-d", mountPoint])
-        print("[listTmutilPaths] raw output lines: \(output.components(separatedBy: "\n").count)")
         let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
-        print("[listTmutilPaths] non-empty lines: \(lines.count)")
-        if let first = lines.first { print("[listTmutilPaths] first line: \(first)") }
         let result = lines.compactMap { line -> (String, Date)? in
             let url = URL(fileURLWithPath: line)
             let name = url.lastPathComponent
-            guard let date = parseBackupDate(from: name) else {
-                print("[listTmutilPaths] failed to parse date from: \(name)")
-                return nil
-            }
+            guard let date = parseBackupDate(from: name) else { return nil }
             return (line, date)
         }
-        print("[listTmutilPaths] parsed \(result.count)/\(lines.count) paths")
         return result
     }
 
     private func listBackupsViaAPFS(mountPoint: String) async throws -> [TimeMachineBackup] {
-        print("[DEBUG] Listing backups via APFS snapshots for: \(mountPoint)")
         let output = try await run("/usr/sbin/diskutil", args: ["apfs", "listSnapshots", "-plist", mountPoint])
-        print("[DEBUG] diskutil output: \(output.prefix(500))")
         guard let data = output.data(using: .utf8),
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
               let snapshots = plist["Snapshots"] as? [[String: Any]] else {
-            print("[DEBUG] Failed to parse diskutil output as plist")
             throw TMError.backupParsingFailed
         }
 
@@ -348,7 +314,6 @@ actor TMUtilService {
                                      snapshotName: name,
                                      volumePath: mountPoint)
         }
-        print("[DEBUG] Found \(result.count) APFS snapshots")
         return result.sorted { $0.date > $1.date }
     }
 

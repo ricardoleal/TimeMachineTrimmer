@@ -7,13 +7,4 @@ struct BackupDestination: Identifiable, Codable {
     let mountPoint: String?
 }
 
-struct TMUtilDestinationPlist: Codable {
-    let Destinations: [DestinationEntry]
 
-    struct DestinationEntry: Codable {
-        let ID: String
-        let Kind: String
-        let Name: String
-        let MountPoint: String?
-    }
-}
