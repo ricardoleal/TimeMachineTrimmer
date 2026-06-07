@@ -6,6 +6,9 @@ on:
     tags:
       - "*.*.*"
 
+permissions:
+  contents: write
+
 env:
   DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
 
