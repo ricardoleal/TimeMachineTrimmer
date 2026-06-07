@@ -1,6 +1,6 @@
 ![Static Badge](https://img.shields.io/badge/26_Tahoe-orange?label=macOS&style=flat-square)
 ![GitHub release (with filter)](https://img.shields.io/github/v/release/ricardoleal/TimeMachineTrimmer?style=flat-square)
-![Downloads](https://img.shields.io/github/downloads/ricardoleal/TimeMachineTrimmer/TimeMachineTrimmer.dmg?style=flat-square&logo=github&label=Downloads&color=green)
+![Homebrew](https://img.shields.io/badge/tap-ricardoleal%2Ftap-FBB040?logo=homebrew&label=homebrew&style=flat-square)
 
 # TimeMachineTrimmer
 <div align="center">
