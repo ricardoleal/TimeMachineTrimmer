@@ -6,5 +6,3 @@ struct BackupDestination: Identifiable, Codable {
     let kind: String
     let mountPoint: String?
 }
-
-
