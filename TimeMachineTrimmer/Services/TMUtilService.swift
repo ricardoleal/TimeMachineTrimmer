@@ -209,7 +209,7 @@ actor TMUtilService {
         readDestinationsFromPlist() ?? []
     }
 
-    private nonisolated func readDestinationsFromPlist() -> [BackupDestination]? {
+    nonisolated private func readDestinationsFromPlist() -> [BackupDestination]? {
         let path = "/Library/Preferences/com.apple.TimeMachine.plist"
         guard let data = FileManager.default.contents(atPath: path) else { return nil }
         guard let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
@@ -259,7 +259,10 @@ actor TMUtilService {
             guard !skip.contains(item), !item.hasPrefix(".") else { continue }
             let volPath = "/Volumes/\(item)"
 
-            let snapshotOutput = try? await run("/usr/sbin/diskutil", args: ["apfs", "listSnapshots", "-plist", volPath])
+            let snapshotOutput = try? await run(
+                "/usr/sbin/diskutil",
+                args: ["apfs", "listSnapshots", "-plist", volPath]
+            )
             guard let output = snapshotOutput else { continue }
 
             // Valid APFS volume with Time Machine snapshots
@@ -318,10 +321,14 @@ actor TMUtilService {
             guard let name = (entry["SnapshotName"] as? String) ?? (entry["Name"] as? String),
                   name.hasPrefix("com.apple.TimeMachine."),
                   let date = parseBackupDate(from: name) else { return nil }
-            return TimeMachineBackup(id: name, date: date, path: "",
-                                     volumeName: volumeName,
-                                     snapshotName: name,
-                                     volumePath: mountPoint)
+            return TimeMachineBackup(
+                id: name,
+                date: date,
+                path: "",
+                volumeName: volumeName,
+                snapshotName: name,
+                volumePath: mountPoint
+            )
         }
         return result.sorted { $0.date > $1.date }
     }
@@ -402,7 +409,7 @@ actor TMUtilService {
     private func parseBackupDate(from name: String) -> Date? {
         let patterns = [
             #"^(\d{4})-(\d{2})-(\d{2})-(\d{6})(\.backup)?$"#,
-            #"\.(\d{4})-(\d{2})-(\d{2})-(\d{6})"#,
+            #"\.(\d{4})-(\d{2})-(\d{2})-(\d{6})"#
         ]
         for pattern in patterns {
             if let date = parseDateWithPattern(pattern, in: name) { return date }

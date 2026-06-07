@@ -180,7 +180,10 @@ final class BackupViewModel {
         do {
             destinations = try await service.getDestinations()
             guard let mountPoint = selectedDestination?.mountPoint else {
-                state = .error("No Time Machine destination volume found.\nConnect your Time Machine drive and try again.")
+                state = .error(
+                    "No Time Machine destination volume found.\n"
+                    + "Connect your Time Machine drive and try again."
+                )
                 return
             }
             backups = try await service.listBackups(mountPoint: mountPoint)

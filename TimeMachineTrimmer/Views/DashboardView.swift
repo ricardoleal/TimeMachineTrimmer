@@ -248,12 +248,21 @@ struct DashboardView: View {
             if let info = viewModel.volumeInfo {
                 Divider()
                     .frame(height: 16)
-                StatItem(icon: "internaldrive",
-                         value: ByteCountFormatter.formatBytes(info.usedBytes), label: "used")
-                StatItem(icon: "externaldrive.badge.checkmark",
-                         value: ByteCountFormatter.formatBytes(info.freeBytes), label: "free")
-                StatItem(icon: "archivebox",
-                         value: ByteCountFormatter.formatBytes(info.totalBytes), label: "total")
+                StatItem(
+                    icon: "internaldrive",
+                    value: ByteCountFormatter.formatBytes(info.usedBytes),
+                    label: "used"
+                )
+                StatItem(
+                    icon: "externaldrive.badge.checkmark",
+                    value: ByteCountFormatter.formatBytes(info.freeBytes),
+                    label: "free"
+                )
+                StatItem(
+                    icon: "archivebox",
+                    value: ByteCountFormatter.formatBytes(info.totalBytes),
+                    label: "total"
+                )
             }
             Divider()
                 .frame(height: 16)

@@ -27,8 +27,8 @@ struct PreviewSheet: View {
 
     private var confirmMessage: String {
         let count = viewModel.previewBackups.count
-        let s = count == 1 ? "" : "s"
-        return "This will permanently delete \(count) backup\(s).\n\n"
+        let suffix = count == 1 ? "" : "s"
+        return "This will permanently delete \(count) backup\(suffix).\n\n"
             + "This action cannot be undone — deleted APFS snapshots cannot be recovered."
     }
 
