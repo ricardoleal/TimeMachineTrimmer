@@ -17,51 +17,24 @@ jobs:
       - name: Install create-dmg
         run: brew install create-dmg
 
-      - name: Install signing certificates
+      - name: Build (unsigned)
         run: |
-          KEYCHAIN="build.keychain"
-          KEYCHAIN_PASS="temp-password"
-          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
-          security default-keychain -s "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
-          security set-keychain-settings -lut 7200 "$KEYCHAIN"
-          security import <(echo "${{ secrets.DEV_SIGN_CERT }}" | base64 -d) \
-            -f pkcs12 -k "${{ secrets.DEV_SIGN_PW }}" -P "${{ secrets.DEV_SIGN_PW }}" \
-            -T /usr/bin/codesign -T /usr/bin/productsign -A "$KEYCHAIN"
-          security import <(echo "${{ secrets.MAC_SIGN_CERT }}" | base64 -d) \
-            -f pkcs12 -k "${{ secrets.MAC_SIGN_PW }}" -P "${{ secrets.MAC_SIGN_PW }}" \
-            -T /usr/bin/codesign -T /usr/bin/productsign -A "$KEYCHAIN"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASS" "$KEYCHAIN"
-          echo "::add-mask::$KEYCHAIN_PASS"
-
-      - name: Archive
-        run: |
-          xcodebuild archive \
+          xcodebuild build \
             -project TimeMachineTrimmer.xcodeproj \
             -scheme TimeMachineTrimmer \
             -configuration Release \
-            -archivePath build/TimeMachineTrimmer.xcarchive \
-            CODE_SIGN_IDENTITY="${{ secrets.CODE_SIGN_IDENTITY }}" \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}"
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Automatic
 
       - name: Copy app
         run: |
           mkdir -p build
-          cp -R "build/TimeMachineTrimmer.xcarchive/Products/Applications/TimeMachineTrimmer.app" build/
-
-      - name: Sign app
-        run: |
-          codesign --options=runtime --force --deep --timestamp \
-            --sign "${{ secrets.CODE_SIGN_IDENTITY }}" \
-            --entitlements "TimeMachineTrimmer/TimeMachineTrimmer.entitlements" \
-            "build/TimeMachineTrimmer.app"
+          cp -R "build/Release/TimeMachineTrimmer.app" build/
 
       - name: Create DMG
         run: |
           create-dmg \
             --volname "TimeMachineTrimmer" \
-            --volicon "build/TimeMachineTrimmer.app/Contents/Resources/AppIcon.icns" \
             --window-pos 200 120 \
             --window-size 500 300 \
             --icon-size 80 \
@@ -69,15 +42,9 @@ jobs:
             --hide-extension "TimeMachineTrimmer.app" \
             --app-drop-link 380 190 \
             --hdiutil-verbose \
-            --notarize "${{ secrets.APPLE_ID }}" "${{ secrets.APPLE_ID_PASSWORD }}" "${{ secrets.APPLE_TEAM_ID }}" \
             --no-internet-enable \
             "build/TimeMachineTrimmer.dmg" \
             "build/TimeMachineTrimmer.app"
-
-      - name: Extract build number
-        run: |
-          BUILD_NUMBER=$(xcrun agvtool vers -terse 2>/dev/null || echo "1")
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
 
       - name: Publish release
         uses: marvinpinto/action-automatic-releases@latest
@@ -88,9 +55,3 @@ jobs:
           title: "TimeMachineTrimmer ${{ github.ref_name }}"
           files: |
             build/TimeMachineTrimmer.dmg
-
-      - name: Cleanup
-        if: ${{ always() }}
-        run: |
-          security delete-keychain "build.keychain" 2>/dev/null || true
-          rm -rf ~/Library/MobileDevice/ProvisioningProfiles 2>/dev/null || true

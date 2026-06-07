@@ -30,6 +30,20 @@ Have a look at [open issues](https://github.com/ricardoleal/TimeMachineTrimmer/i
 
 When submitting a pull request, make sure you are on a feature branch in your fork.
 
+## Publishing
+
+```bash
+# 1. Tag the release
+git tag v1.0.0 && git push origin v1.0.0
+
+# 2. CI builds unsigned DMG & creates GitHub Release
+
+# 3. Build & sign locally with your cert
+./.scripts/build.sh
+
+# 4. Upload the signed .app from build/ to the Release manually
+```
+
 ## Development Setup
 
 Clone the repository and open in **Xcode** on macOS 26 (Tahoe).
