@@ -25,14 +25,37 @@ struct ResultSheet: View {
 
                 if !result.errors.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Errors")
-                            .font(.headline)
-                            .padding(.bottom, 2)
+                        HStack {
+                            Text("Errors")
+                                .font(.headline)
+                            Spacer()
+                            Button("Copy All") {
+                                copyToClipboard(result.errors.map { "\($0.backup.dateShortFormatted): \($0.error)" }.joined(separator: "\n"))
+                            }
+                            .buttonStyle(.plain)
+                            .font(.caption)
+                            .foregroundStyle(.tint)
+                        }
+                        .padding(.bottom, 2)
                         ForEach(result.errors) { item in
-                            Text("\(item.backup.dateShortFormatted): \(item.error)")
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                                .lineLimit(2)
+                            HStack(alignment: .top, spacing: 4) {
+                                Text("\(item.backup.dateShortFormatted): \(item.error)")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                    .lineLimit(2)
+                                Button {
+                                    copyToClipboard("\(item.backup.dateShortFormatted): \(item.error)")
+                                } label: {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundStyle(.tertiary)
+                                .onHover { hovering in
+                                    if hovering { NSCursor.pointingHand.push() }
+                                    else { NSCursor.pop() }
+                                }
+                            }
                         }
                     }
                     .padding()
@@ -56,6 +79,11 @@ struct ResultSheet: View {
             .padding(.bottom)
         }
         .frame(width: 420, height: 380)
+    }
+
+    private func copyToClipboard(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 }
 

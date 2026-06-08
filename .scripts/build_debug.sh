@@ -86,10 +86,15 @@ ICONEOF
     iconutil -c icns "$ICONSET_TMP" -o "$APP_BUNDLE/Contents/Resources/AppIcon.icns" 2>&1
     rm -rf "$ICONSET_TMP"
 
-    echo "==> Code-signing with hardened runtime..."
-    codesign --force --options runtime --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
-    codesign -dv "$APP_BUNDLE" 2>&1 | grep -E "Signature|Signed|adhoc|TeamIdentifier"
+    echo "==> Build complete."
+fi
 
+# Always re-sign (cached binary may have stale/adhoc signature)
+echo "==> Code-signing with hardened runtime (identity: $SIGN_IDENTITY)..."
+codesign --force --options runtime --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+codesign -dv "$APP_BUNDLE" 2>&1 | grep -E "Signature|Signed|adhoc|TeamIdentifier"
+
+if $NEEDS_BUILD; then
     echo "$CURRENT_HASH" > "$MANIFEST"
     echo "✅ Build & sign complete."
 fi

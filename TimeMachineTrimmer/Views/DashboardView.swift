@@ -39,6 +39,22 @@ struct DashboardView: View {
                 searchField
             }
 
+            Menu {
+                Button("Open Log Folder") {
+                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: DebugLogger.logPath)
+                }
+                Button("Clear Log") {
+                    DebugLogger.clear()
+                }
+            } label: {
+                Image(systemName: "doc.text.magnifyingglass")
+                    .font(.caption)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .frame(width: 20)
+            .help("Debug Log")
+
             Button("Scan", systemImage: "arrow.clockwise") {
                 if viewModel.selectedDestination == nil {
                     viewModel.selectFirstDestination()

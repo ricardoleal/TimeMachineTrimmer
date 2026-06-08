@@ -59,6 +59,7 @@ actor TMUtilService {
 
     @discardableResult
     private func runPrivileged(_ command: String) async throws -> String {
+        DebugLogger.log("runPrivileged: \(command.prefix(200))")
         let escaped = command
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
@@ -116,15 +117,18 @@ actor TMUtilService {
             process.waitUntilExit()
             let err = errPipe.fileHandleForReading.readDataToEndOfFile()
             let errorOutput = String(data: err, encoding: .utf8) ?? ""
-            let status = process.terminationStatus
-            if errorOutput.contains("Full Disk Access") { return false }
-            return status == 0
+            let granted = !errorOutput.contains("Full Disk Access")
+            DebugLogger.log("checkFDA: tmutil listbackups → \(granted ? "granted" : "denied")")
+            if !granted { DebugLogger.log("checkFDA: stderr=\(errorOutput)") }
+            return granted
         } catch {
+            DebugLogger.log("checkFDA: exception → false (\(error.localizedDescription))")
             return false
         }
     }
 
     static func triggerFDAuthorizationPrompt() {
+        DebugLogger.log("triggerFDAuthorizationPrompt: touching /.vol and /Volumes/.TMExcludeStore")
         let paths = ["/.vol", "/Volumes/.TMExcludeStore"]
         for path in paths {
             _ = FileManager.default.isReadableFile(atPath: path)
@@ -153,8 +157,11 @@ actor TMUtilService {
             process.waitUntilExit()
             let data = outPipe.fileHandleForReading.readDataToEndOfFile()
             let output = String(data: data, encoding: .utf8) ?? ""
-            return parseBackupStatus(output)
+            let status = parseBackupStatus(output)
+            DebugLogger.log("backupStatus: running=\(status.running) phase=\(status.phase) percent=\(status.percent)")
+            return status
         } catch {
+            DebugLogger.log("backupStatus: exception → idle (\(error.localizedDescription))")
             return BackupStatus(
                 running: false, firstBackup: false,
                 phase: "", percent: 0, timeRemaining: 0,
@@ -196,24 +203,36 @@ actor TMUtilService {
 
     func getDestinations() async throws -> [BackupDestination] {
         if let plistDests = readDestinationsFromPlist() {
+            DebugLogger.log("getDestinations: found \(plistDests.count) via plist")
             return plistDests
         }
+        DebugLogger.log("getDestinations: plist returned nil, trying APFS scan")
         if let snapDests = try? await findDestinationsViaAPFSSnapshots() {
+            DebugLogger.log("getDestinations: found \(snapDests.count) via APFS scan")
             return snapDests
         }
+        DebugLogger.log("getDestinations: no destinations found, throwing noDestination")
         throw TMError.noDestination
     }
 
     /// Quick plist-only lookup — no disk scanning, shows configured destinations immediately
     nonisolated func getConfiguredDestinations() -> [BackupDestination] {
-        readDestinationsFromPlist() ?? []
+        let dests = readDestinationsFromPlist() ?? []
+        DebugLogger.log("getConfiguredDestinations: \(dests.count) destinations")
+        return dests
     }
 
     nonisolated private func readDestinationsFromPlist() -> [BackupDestination]? {
         let path = "/Library/Preferences/com.apple.TimeMachine.plist"
-        guard let data = FileManager.default.contents(atPath: path) else { return nil }
+        guard let data = FileManager.default.contents(atPath: path) else {
+            DebugLogger.log("readDestinationsFromPlist: plist not readable (no FDA?)")
+            return nil
+        }
         guard let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
-              let dict = plist as? [String: Any] else { return nil }
+              let dict = plist as? [String: Any] else {
+            DebugLogger.log("readDestinationsFromPlist: plist read but parse failed")
+            return nil
+        }
 
         let allDests: [[String: Any]]
         if let known = dict["Destinations"] as? [[String: Any]] {
@@ -221,10 +240,12 @@ actor TMUtilService {
         } else if let single = dict["CurrentDestination"] as? [String: Any] {
             allDests = [single]
         } else {
+            DebugLogger.log("readDestinationsFromPlist: no Destinations or CurrentDestination key")
             return nil
         }
 
         let mounted = (try? FileManager.default.contentsOfDirectory(atPath: "/Volumes")) ?? []
+        DebugLogger.log("readDestinationsFromPlist: \(allDests.count) configured, mounted: \(mounted)")
 
         let result = allDests.compactMap { entry -> BackupDestination? in
             let id = (entry["SnapshotDiskUUID"] as? String) ?? (entry["ID"] as? String) ?? UUID().uuidString
@@ -248,12 +269,17 @@ actor TMUtilService {
 
             return nil
         }
+        DebugLogger.log("readDestinationsFromPlist: \(result.count) destinations resolved")
         return result.isEmpty ? nil : result
     }
 
     private func findDestinationsViaAPFSSnapshots() async throws -> [BackupDestination]? {
         let skip = Set(["Update", "Recovery", "Preboot", "VM", "Macintosh HD", "com.apple.TimeMachine.localsnapshots"])
-        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: "/Volumes") else { return nil }
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: "/Volumes") else {
+            DebugLogger.log("findDestinationsViaAPFSSnapshots: /Volumes not readable")
+            return nil
+        }
+        DebugLogger.log("findDestinationsViaAPFSSnapshots: scanning \(contents)")
         var result: [BackupDestination] = []
         for item in contents {
             guard !skip.contains(item), !item.hasPrefix(".") else { continue }
@@ -263,13 +289,20 @@ actor TMUtilService {
                 "/usr/sbin/diskutil",
                 args: ["apfs", "listSnapshots", "-plist", volPath]
             )
-            guard let output = snapshotOutput else { continue }
+            guard let output = snapshotOutput else {
+                DebugLogger.log("findDestinationsViaAPFSSnapshots: \(item) → diskutil failed")
+                continue
+            }
 
             // Valid APFS volume with Time Machine snapshots
             if output.contains("com.apple.TimeMachine.") {
+                DebugLogger.log("findDestinationsViaAPFSSnapshots: \(item) → has TM snapshots ✓")
                 result.append(BackupDestination(id: UUID().uuidString, name: item, kind: "APFS", mountPoint: volPath))
+            } else {
+                DebugLogger.log("findDestinationsViaAPFSSnapshots: \(item) → no TM snapshots")
             }
         }
+        DebugLogger.log("findDestinationsViaAPFSSnapshots: \(result.count) destinations found")
         return result.isEmpty ? nil : result
     }
 
@@ -277,8 +310,10 @@ actor TMUtilService {
 
     func listBackups(mountPoint: String) async throws -> [TimeMachineBackup] {
         var backups = try await listBackupsViaAPFS(mountPoint: mountPoint)
+        DebugLogger.log("listBackups: \(backups.count) via APFS on \(mountPoint)")
         let hasFDA = TMUtilService.checkFDA()
         if hasFDA, let tmutilPaths = try? await listTmutilPaths(mountPoint: mountPoint) {
+            DebugLogger.log("listBackups: \(tmutilPaths.count) tmutil paths, merging paths")
             for index in backups.indices {
                 if let match = tmutilPaths.first(where: { abs($0.date.timeIntervalSince(backups[index].date)) < 120 }) {
                     backups[index] = TimeMachineBackup(
@@ -291,7 +326,10 @@ actor TMUtilService {
                     )
                 }
             }
+        } else {
+            DebugLogger.log("listBackups: no tmutil paths (FDA=\(hasFDA))")
         }
+        DebugLogger.log("listBackups: returning \(backups.count) backups")
         return backups
     }
 
@@ -304,6 +342,7 @@ actor TMUtilService {
             guard let date = parseBackupDate(from: name) else { return nil }
             return (line, date)
         }
+        DebugLogger.log("listTmutilPaths: \(result.count) paths parsed on \(mountPoint)")
         return result
     }
 
@@ -312,6 +351,7 @@ actor TMUtilService {
         guard let data = output.data(using: .utf8),
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
               let snapshots = plist["Snapshots"] as? [[String: Any]] else {
+            DebugLogger.log("listBackupsViaAPFS: parse failed for \(mountPoint)")
             throw TMError.backupParsingFailed
         }
 
@@ -330,6 +370,7 @@ actor TMUtilService {
                 volumePath: mountPoint
             )
         }
+        DebugLogger.log("listBackupsViaAPFS: \(result.count) TM snapshots on \(mountPoint)")
         return result.sorted { $0.date > $1.date }
     }
 
@@ -349,6 +390,7 @@ actor TMUtilService {
         guard let output = try? await run("/usr/sbin/diskutil", args: ["info", "-plist", mountPoint]),
               let data = output.data(using: .utf8),
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
+            DebugLogger.log("getVolumeInfo: diskutil info failed for \(mountPoint)")
             return nil
         }
         let fileSystem = plist["FilesystemType"] as? String ?? plist["FilesystemName"] as? String ?? "?"
@@ -375,7 +417,7 @@ actor TMUtilService {
             freeBytes = freeSpace
         }
 
-        return VolumeInfo(
+        let info = VolumeInfo(
             totalBytes: totalBytes,
             usedBytes: usedBytes,
             freeBytes: freeBytes,
@@ -384,6 +426,8 @@ actor TMUtilService {
             solidState: ssd,
             volumeKind: kind
         )
+        DebugLogger.log("getVolumeInfo: total=\(totalBytes) used=\(usedBytes) free=\(freeBytes) kind=\(kind) ssd=\(ssd)")
+        return info
     }
 
     // MARK: - Delete
@@ -391,19 +435,45 @@ actor TMUtilService {
     func deleteBackup(_ backup: TimeMachineBackup) async throws {
         guard let mountPoint = backup.volumePath,
               let snapshotName = backup.snapshotName else {
+            DebugLogger.log("deleteBackup: missing volumePath or snapshotName")
             throw TMError.backupParsingFailed
         }
 
+        DebugLogger.log("deleteBackup: snapshot=\(snapshotName) mount=\(mountPoint)")
+
         let escapedMount = mountPoint.replacingOccurrences(of: "\"", with: "\\\"")
         let escapedName = snapshotName.replacingOccurrences(of: "\"", with: "\\\"")
-        let command = "/usr/bin/tmutil deletebackups -d \"\(escapedMount)\" -t \"\(escapedName)\""
+        let datePart = snapshotName
+            .replacingOccurrences(of: "com.apple.TimeMachine.", with: "")
+            .replacingOccurrences(of: ".backup", with: "")
+        let escapedDate = datePart.replacingOccurrences(of: "\"", with: "\\\"")
+
+        let command = """
+        UUID=""
+        for UUID_DIR in /Volumes/.timemachine/*/; do
+            [ -d "$UUID_DIR" ] || continue
+            CANDIDATE="/Volumes/.timemachine/$(basename "$UUID_DIR")/\(escapedDate).backup"
+            if [ -d "$CANDIDATE" ]; then
+                UUID=$(basename "$UUID_DIR")
+                break
+            fi
+        done
+
+        if [ -n "$UUID" ]; then
+            /usr/sbin/diskutil unmount "/Volumes/.timemachine/$UUID/\(escapedDate).backup" >/dev/null 2>&1 || true
+        fi
+
+        /usr/sbin/diskutil apfs deleteSnapshot "\(escapedMount)" -name "\(escapedName)"
+        """
 
         do {
             try await runPrivileged(command)
+            DebugLogger.log("deleteBackup: ✅ deleted \(snapshotName)")
         } catch let error as TMError {
             if case .processFailed(let raw) = error {
                 let errorCode = parseErrorCode(raw)
                 let codePrefix = errorCode.map { "Error \($0): " } ?? ""
+                DebugLogger.log("deleteBackup: ❌ \(snapshotName) → Error \(codePrefix)\(raw)")
                 throw TMError.deleteFailed("\(codePrefix)\(raw)")
             }
             throw error

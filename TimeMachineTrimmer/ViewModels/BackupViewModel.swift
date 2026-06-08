@@ -134,6 +134,7 @@ final class BackupViewModel {
     }
 
     func requestPermissions() {
+        DebugLogger.log("requestPermissions: opening System Settings FDA page")
         needsPermissionSheet = true
         TMUtilService.triggerFDAuthorizationPrompt()
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
@@ -145,10 +146,13 @@ final class BackupViewModel {
     }
 
     func checkPermissionsAndScan() async {
+        DebugLogger.log("checkPermissionsAndScan")
         if !TMUtilService.checkFDA() {
+            DebugLogger.log("checkPermissionsAndScan: FDA denied, showing permission sheet")
             needsPermissionSheet = true
             return
         }
+        DebugLogger.log("checkPermissionsAndScan: FDA granted, scanning")
         needsPermissionSheet = false
         await scanBackups()
     }
@@ -156,13 +160,16 @@ final class BackupViewModel {
     /// Load known destinations from Time Machine plist (fast, no disk scanning)
     func loadDestinations() {
         destinations = service.getConfiguredDestinations()
+        DebugLogger.log("loadDestinations: \(destinations.count) destinations")
     }
 
     func selectFirstDestination() {
         _selectedDestination = destinations.first
+        DebugLogger.log("selectFirstDestination: \(_selectedDestination?.name ?? "nil")")
     }
 
     func selectDestination(_ destination: BackupDestination) async {
+        DebugLogger.log("selectDestination: \(destination.name) (\(destination.mountPoint))")
         _selectedDestination = destination
         selectedBackupIds.removeAll()
         await scanBackups()
@@ -174,23 +181,28 @@ final class BackupViewModel {
     }
 
     func scanBackups() async {
+        DebugLogger.log("scanBackups: starting")
         state = .scanning
         needsPermissionSheet = false
         tmBackupRunning = TMUtilService.backupStatus().running
         do {
             destinations = try await service.getDestinations()
             guard let mountPoint = selectedDestination?.mountPoint else {
+                DebugLogger.log("scanBackups: no mount point, showing error")
                 state = .error(
                     "No Time Machine destination volume found.\n"
                     + "Connect your Time Machine drive and try again."
                 )
                 return
             }
+            DebugLogger.log("scanBackups: mountPoint=\(mountPoint)")
             backups = try await service.listBackups(mountPoint: mountPoint)
             volumeInfo = await service.getVolumeInfo(mountPoint: mountPoint)
             if selectedMethod == .age { updateAgeSelection() }
+            DebugLogger.log("scanBackups: done — \(backups.count) backups")
             state = .scanned
         } catch {
+            DebugLogger.log("scanBackups: error — \(error.localizedDescription)")
             state = .error(error.localizedDescription)
         }
     }
@@ -210,6 +222,7 @@ final class BackupViewModel {
     }
 
     func executeDeletion() async {
+        DebugLogger.log("executeDeletion: starting — \(previewBackups.count) backups")
         state = .deleting
         deletionProgress = 0
         deletionLog = []
@@ -225,10 +238,12 @@ final class BackupViewModel {
                 try await service.deleteBackup(backup)
                 deleted += 1
                 deletedIds.insert(backup.id)
+                DebugLogger.log("executeDeletion: ✅ \(backup.snapshotName ?? backup.id)")
                 deletionLog.append("\u{2705} \(backup.dateShortFormatted): Deleted")
             } catch {
                 failed += 1
                 let msg = error.localizedDescription
+                DebugLogger.log("executeDeletion: ❌ \(backup.snapshotName ?? backup.id) — \(msg)")
                 errors.append(DeletionError(backup: backup, error: msg))
                 deletionLog.append("\u{274C} \(backup.dateShortFormatted): \(msg)")
             }
@@ -244,6 +259,7 @@ final class BackupViewModel {
             spaceReclaimed: 0,
             errors: errors
         )
+        DebugLogger.log("executeDeletion: done — \(deleted) deleted, \(failed) failed")
         state = .done(result)
     }
 
