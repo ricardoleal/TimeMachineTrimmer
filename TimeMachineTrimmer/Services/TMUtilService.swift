@@ -24,13 +24,13 @@ actor TMUtilService {
                     continuation.resume(returning: output.trimmingCharacters(in: .whitespacesAndNewlines))
                 } else {
                     let msg = error.isEmpty ? output : error
-                    continuation.resume(throwing: TMError.processFailed(msg))
+                    continuation.resume(throwing: TMUtilTypes.TMError.processFailed(msg))
                 }
             }
             do {
                 try process.run()
             } catch {
-                continuation.resume(throwing: TMError.processFailed(error.localizedDescription))
+                continuation.resume(throwing: TMUtilTypes.TMError.processFailed(error.localizedDescription))
             }
         }
     }
@@ -65,16 +65,16 @@ actor TMUtilService {
                     if combined.localizedCaseInsensitiveContains("cancelled") ||
                        combined.localizedCaseInsensitiveContains("User canceled") ||
                        combined.localizedCaseInsensitiveContains("(-128)") {
-                        continuation.resume(throwing: TMError.processFailed("Authentication cancelled"))
+                        continuation.resume(throwing: TMUtilTypes.TMError.processFailed("Authentication cancelled"))
                     } else {
-                        continuation.resume(throwing: TMError.processFailed(combined))
+                        continuation.resume(throwing: TMUtilTypes.TMError.processFailed(combined))
                     }
                 }
             }
             do {
                 try process.run()
             } catch {
-                continuation.resume(throwing: TMError.processFailed(error.localizedDescription))
+                continuation.resume(throwing: TMUtilTypes.TMError.processFailed(error.localizedDescription))
             }
         }
     }
@@ -92,7 +92,7 @@ actor TMUtilService {
             return snapDests
         }
         DebugLogger.log("getDestinations: no destinations found, throwing noDestination")
-        throw TMError.noDestination
+        throw TMUtilTypes.TMError.noDestination
     }
 
     /// Quick plist-only lookup — no disk scanning, shows configured destinations immediately
@@ -219,7 +219,7 @@ actor TMUtilService {
         let result = lines.compactMap { line -> (String, Date)? in
             let url = URL(fileURLWithPath: line)
             let name = url.lastPathComponent
-            guard let date = parseBackupDate(from: name) else { return nil }
+            guard let date = TMUtilTypes.parseBackupDate(from: name) else { return nil }
             return (line, date)
         }
         DebugLogger.log("listTmutilPaths: \(result.count) paths parsed on \(mountPoint)")
@@ -232,7 +232,7 @@ actor TMUtilService {
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
               let snapshots = plist["Snapshots"] as? [[String: Any]] else {
             DebugLogger.log("listBackupsViaAPFS: parse failed for \(mountPoint)")
-            throw TMError.backupParsingFailed
+            throw TMUtilTypes.TMError.backupParsingFailed
         }
 
         let volumeName = URL(fileURLWithPath: mountPoint).lastPathComponent
@@ -240,7 +240,7 @@ actor TMUtilService {
         let result = snapshots.compactMap { entry -> TimeMachineBackup? in
             guard let name = (entry["SnapshotName"] as? String) ?? (entry["Name"] as? String),
                   name.hasPrefix("com.apple.TimeMachine."),
-                  let date = parseBackupDate(from: name) else { return nil }
+                  let date = TMUtilTypes.parseBackupDate(from: name) else { return nil }
             return TimeMachineBackup(
                 id: name,
                 date: date,
@@ -287,7 +287,7 @@ actor TMUtilService {
             freeBytes = freeSpace
         }
 
-        let info = VolumeInfo(
+        let info = TMUtilTypes.VolumeInfo(
             totalBytes: totalBytes,
             usedBytes: usedBytes,
             freeBytes: freeBytes,
@@ -296,7 +296,9 @@ actor TMUtilService {
             solidState: ssd,
             volumeKind: kind
         )
-        DebugLogger.log("getVolumeInfo: total=\(totalBytes) used=\(usedBytes) free=\(freeBytes) kind=\(kind) ssd=\(ssd)")
+        DebugLogger.log(
+            "getVolumeInfo: total=\(totalBytes) used=\(usedBytes) free=\(freeBytes) kind=\(kind) ssd=\(ssd)"
+        )
         return info
     }
 
@@ -306,7 +308,7 @@ actor TMUtilService {
         guard let mountPoint = backup.volumePath,
               let snapshotName = backup.snapshotName else {
             DebugLogger.log("deleteBackup: missing volumePath or snapshotName")
-            throw TMError.backupParsingFailed
+            throw TMUtilTypes.TMError.backupParsingFailed
         }
 
         DebugLogger.log("deleteBackup: snapshot=\(snapshotName) mount=\(mountPoint)")
@@ -341,13 +343,12 @@ actor TMUtilService {
             DebugLogger.log("deleteBackup: ✅ deleted \(snapshotName)")
         } catch let error as TMError {
             if case .processFailed(let raw) = error {
-                let errorCode = parseErrorCode(raw)
+                let errorCode = TMUtilTypes.parseErrorCode(raw)
                 let codePrefix = errorCode.map { "Error \($0): " } ?? ""
                 DebugLogger.log("deleteBackup: ❌ \(snapshotName) → Error \(codePrefix)\(raw)")
-                throw TMError.deleteFailed("\(codePrefix)\(raw)")
+                throw TMUtilTypes.TMError.deleteFailed("\(codePrefix)\(raw)")
             }
             throw error
         }
     }
-
 }

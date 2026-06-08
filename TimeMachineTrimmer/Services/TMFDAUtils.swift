@@ -46,7 +46,7 @@ enum TMFDAUtils {
             process.waitUntilExit()
             let data = outPipe.fileHandleForReading.readDataToEndOfFile()
             let output = String(data: data, encoding: .utf8) ?? ""
-            let status = parseBackupStatus(output)
+            let status = TMUtilTypes.parseBackupStatus(output)
             DebugLogger.log("backupStatus: running=\(status.running) phase=\(status.phase) percent=\(status.percent)")
             return status
         } catch {

@@ -61,7 +61,7 @@ enum DebugLogger {
     static func clear() {
         queue.async {
             headerWritten = false
-            try? "".data(using: .utf8)?.write(to: logFile)
+            try? Data("".utf8).write(to: logFile)
         }
     }
 }
