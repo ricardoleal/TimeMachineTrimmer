@@ -311,36 +311,50 @@ actor TMUtilService {
             throw TMUtilTypes.TMError.backupParsingFailed
         }
 
-        DebugLogger.log("deleteBackup: snapshot=\(snapshotName) mount=\(mountPoint)")
+        DebugLogger.log("deleteBackup: snapshot=\(snapshotName) mount=\(mountPoint) path=\(backup.path)")
 
-        let escapedMount = mountPoint.replacingOccurrences(of: "\"", with: "\\\"")
-        let escapedName = snapshotName.replacingOccurrences(of: "\"", with: "\\\"")
+        // Strategy 1: tmutil deletebackups with direct path (preferred on macOS 26+)
+        if !backup.path.isEmpty {
+            do {
+                let escapedPath = backup.path.replacingOccurrences(of: "\"", with: "\\\"")
+                try await runPrivileged("/usr/bin/tmutil deletebackups \"\(escapedPath)\"")
+                DebugLogger.log("deleteBackup: ✅ tmutil deleted \(snapshotName)")
+                return
+            } catch {
+                DebugLogger.log("deleteBackup: tmutil failed, trying diskutil — \(error.localizedDescription)")
+            }
+        } else {
+            DebugLogger.log("deleteBackup: no tmutil path available, using diskutil")
+        }
+
+        // Strategy 2: diskutil apfs deleteSnapshot with force unmount
         let datePart = snapshotName
             .replacingOccurrences(of: "com.apple.TimeMachine.", with: "")
             .replacingOccurrences(of: ".backup", with: "")
-        let escapedDate = datePart.replacingOccurrences(of: "\"", with: "\\\"")
+        let escapedName = snapshotName.replacingOccurrences(of: "\"", with: "\\\"")
+        let escapedMount = mountPoint.replacingOccurrences(of: "\"", with: "\\\"")
 
-        let command = """
-        UUID=""
-        for UUID_DIR in /Volumes/.timemachine/*/; do
-            [ -d "$UUID_DIR" ] || continue
-            CANDIDATE="/Volumes/.timemachine/$(basename "$UUID_DIR")/\(escapedDate).backup"
-            if [ -d "$CANDIDATE" ]; then
-                UUID=$(basename "$UUID_DIR")
-                break
-            fi
-        done
+        // Step A: Find UUID in Swift by enumerating /Volumes/.timemachine/
+        if let uuid = findSnapshotUUID(datePart: datePart) {
+            let snapshotPath = "/Volumes/.timemachine/\(uuid)/\(datePart).backup"
+            let escapedSnapPath = snapshotPath.replacingOccurrences(of: "\"", with: "\\\"")
+            DebugLogger.log("deleteBackup: found UUID=\(uuid), force unmounting \(snapshotPath)")
 
-        if [ -n "$UUID" ]; then
-            /usr/sbin/diskutil unmount "/Volumes/.timemachine/$UUID/\(escapedDate).backup" >/dev/null 2>&1 || true
-        fi
+            // Step B: Force unmount the snapshot path
+            let unmountResult = try? await runPrivileged(
+                "/usr/sbin/diskutil unmount force \"\(escapedSnapPath)\""
+            )
+            DebugLogger.log("deleteBackup: unmount result=\(unmountResult ?? "failed or already unmounted")")
+        } else {
+            DebugLogger.log("deleteBackup: UUID not found under /Volumes/.timemachine/")
+        }
 
-        /usr/sbin/diskutil apfs deleteSnapshot "\(escapedMount)" -name "\(escapedName)"
-        """
-
+        // Step C: Delete the snapshot
         do {
-            try await runPrivileged(command)
-            DebugLogger.log("deleteBackup: ✅ deleted \(snapshotName)")
+            try await runPrivileged(
+                "/usr/sbin/diskutil apfs deleteSnapshot \"\(escapedMount)\" -name \"\(escapedName)\""
+            )
+            DebugLogger.log("deleteBackup: ✅ diskutil deleted \(snapshotName)")
         } catch let error as TMUtilTypes.TMError {
             if case .processFailed(let raw) = error {
                 let errorCode = TMUtilTypes.parseErrorCode(raw)
@@ -350,5 +364,20 @@ actor TMUtilService {
             }
             throw error
         }
+    }
+
+    /// Iterates /Volumes/.timemachine/*/ to find the UUID containing the given datePart
+    private func findSnapshotUUID(datePart: String) -> String? {
+        guard let entries = try? FileManager.default.contentsOfDirectory(atPath: "/Volumes/.timemachine") else {
+            return nil
+        }
+        for entry in entries {
+            let candidate = "/Volumes/.timemachine/\(entry)/\(datePart).backup"
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: candidate, isDirectory: &isDir), isDir.boolValue {
+                return entry
+            }
+        }
+        return nil
     }
 }
