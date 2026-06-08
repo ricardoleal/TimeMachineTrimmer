@@ -393,15 +393,37 @@ actor TMUtilService {
               let snapshotName = backup.snapshotName else {
             throw TMError.backupParsingFailed
         }
-        let datePart = snapshotName
-            .replacingOccurrences(of: "com.apple.TimeMachine.", with: "")
-            .replacingOccurrences(of: ".backup", with: "")
-        let command = """
-        UUID=$(/bin/ls /Volumes/.timemachine/ | /usr/bin/head -1)
-        /usr/sbin/diskutil unmount "/Volumes/.timemachine/$UUID/\(datePart).backup" >/dev/null 2>&1 || true
-        /usr/sbin/diskutil apfs deleteSnapshot "\(mountPoint)" -name "\(snapshotName)"
-        """
-        try await runPrivileged(command)
+
+        let escapedMount = mountPoint.replacingOccurrences(of: "\"", with: "\\\"")
+        let escapedName = snapshotName.replacingOccurrences(of: "\"", with: "\\\"")
+        let command = "/usr/bin/tmutil deletebackups -d \"\(escapedMount)\" -t \"\(escapedName)\""
+
+        do {
+            try await runPrivileged(command)
+        } catch let error as TMError {
+            if case .processFailed(let raw) = error {
+                let errorCode = parseErrorCode(raw)
+                let codePrefix = errorCode.map { "Error \($0): " } ?? ""
+                throw TMError.deleteFailed("\(codePrefix)\(raw)")
+            }
+            throw error
+        }
+    }
+
+    /// Extracts numeric error codes (e.g. -69528) from osascript/command output
+    private func parseErrorCode(_ output: String) -> String? {
+        let patterns = [
+            #"Error:\s*(-\d+)"#,
+            #"\((-?\d+)\)"#
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern),
+                  let match = regex.firstMatch(in: output, range: NSRange(output.startIndex..., in: output)),
+                  match.numberOfRanges >= 2 else { continue }
+            let nsStr = output as NSString
+            return nsStr.substring(with: match.range(at: 1))
+        }
+        return nil
     }
 
     // MARK: - Date parsing
