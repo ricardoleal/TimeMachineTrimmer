@@ -27,6 +27,7 @@
 		AA0000010000000100000001 /* Services/TMUtilTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000100000001 /* Services/TMUtilTypes.swift */; };
 		AA0000020000000200000002 /* Services/TMFDAUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000020000000200000002 /* Services/TMFDAUtils.swift */; };
 		AA0000030000000300000003 /* Services/DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000030000000300000003 /* Services/DebugLogger.swift */; };
+		CCDD000200000002CCDD0002 /* Services/HelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +53,7 @@
 		BB0000010000000100000001 /* Services/TMUtilTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/TMUtilTypes.swift; sourceTree = "<group>"; };
 		BB0000020000000200000002 /* Services/TMFDAUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/TMFDAUtils.swift; sourceTree = "<group>"; };
 		BB0000030000000300000003 /* Services/DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DebugLogger.swift; sourceTree = "<group>"; };
+		CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HelperProtocol.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +94,7 @@
 				BB0000010000000100000001 /* Services/TMUtilTypes.swift */,
 				BB0000020000000200000002 /* Services/TMFDAUtils.swift */,
 				BB0000030000000300000003 /* Services/DebugLogger.swift */,
+				CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */,
 				9A3B9BFD05E949DF91F693B8 /* ViewModels/BackupViewModel.swift */,
 				00B58925DE984C63BC5D63C1 /* Views/ContentView.swift */,
 				53FD8317951843FCB8E9C82E /* Views/PermissionView.swift */,
@@ -180,6 +183,7 @@
 				AA0000010000000100000001 /* Services/TMUtilTypes.swift in Sources */,
 				AA0000020000000200000002 /* Services/TMFDAUtils.swift in Sources */,
 				AA0000030000000300000003 /* Services/DebugLogger.swift in Sources */,
+				CCDD000200000002CCDD0002 /* Services/HelperProtocol.swift in Sources */,
 				81F482A0E7DC4C5C8C080844 /* ViewModels/BackupViewModel.swift in Sources */,
 				7AE899A990904A9287860C99 /* Views/ContentView.swift in Sources */,
 				2B4E9F7998E241A89D8AADD9 /* Views/PermissionView.swift in Sources */,

@@ -80,7 +80,7 @@ if $NEEDS_BUILD; then
     { "size":"512x512", "idiom":"mac", "filename":"icon_512x512.png", "scale":"1x" },
     { "size":"512x512", "idiom":"mac", "filename":"icon_512x512@2x.png", "scale":"2x" }
   ],
-  "info" : { "author" : "opencode", "version" : 1 }
+  "info" : { "author" : "developer", "version" : 1 }
 }
 ICONEOF
     iconutil -c icns "$ICONSET_TMP" -o "$APP_BUNDLE/Contents/Resources/AppIcon.icns" 2>&1
