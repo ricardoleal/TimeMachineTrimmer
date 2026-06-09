@@ -24,3 +24,21 @@ jobs:
             -configuration Release \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGN_STYLE=Automatic
+
+      - name: Build Helper
+        run: |
+          HELPER_DIR="PrivilegedHelper"
+          SRC_DIR="TimeMachineTrimmer"
+          APP_PATH="$(xcodebuild -project TimeMachineTrimmer.xcodeproj -scheme TimeMachineTrimmer -configuration Release -showBuildSettings | grep -m1 "BUILT_PRODUCTS_DIR" | awk '{print $3}')/TimeMachineTrimmer.app"
+          mkdir -p "$APP_PATH/Contents/Library/LaunchServices"
+          swiftc \
+            -target arm64-apple-macosx14.4 \
+            -sdk "$(xcrun --show-sdk-path)" \
+            "$HELPER_DIR/main.swift" \
+            "$SRC_DIR/Services/HelperProtocol.swift" \
+            -o "$APP_PATH/Contents/Library/LaunchServices/TimeMachineTrimmer-helper" \
+            -module-name "TMTHelper" \
+            -emit-executable \
+            -O
+          cp "$HELPER_DIR/com.ricardoleal.TimeMachineTrimmer.helper.plist" "$APP_PATH/Contents/Library/LaunchServices/"
+          codesign --force --options runtime --sign - "$APP_PATH/Contents/Library/LaunchServices/TimeMachineTrimmer-helper"
