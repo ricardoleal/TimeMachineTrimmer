@@ -380,4 +380,12 @@ actor TMUtilService {
         }
         return nil
     }
+
+    // MARK: - Helper Batch Delete
+
+    func deleteBackupsViaHelper(_ backups: [TimeMachineBackup]) async throws -> [String: String] {
+        let client = HelperClient()
+        try await client.ensureInstalled()
+        return try await client.deleteBackups(backups)
+    }
 }

@@ -195,12 +195,12 @@ func cmdDelete(args: [String]) {
         log("  Path:     \(path)")
     }
 
-    let backup = HelperBackup(
-        id: snapshotName,
-        path: path,
-        snapshotName: snapshotName,
-        volumePath: volumePath
-    )
+    let backup: [String: String] = [
+        "id": snapshotName,
+        "path": path,
+        "snapshotName": snapshotName,
+        "volumePath": volumePath
+    ]
 
     let proxy = connectToHelper()
     proxy.deleteBackups([backup]) { results in
