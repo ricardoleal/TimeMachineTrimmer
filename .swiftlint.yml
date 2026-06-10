@@ -64,6 +64,7 @@ nesting:
 excluded:
   - DerivedData
   - build
+  - Tests
 
 custom_rules:
   no_print_statements:

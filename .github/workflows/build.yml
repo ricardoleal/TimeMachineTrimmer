@@ -42,3 +42,14 @@ jobs:
             -O
           cp "$HELPER_DIR/com.ricardoleal.TimeMachineTrimmer.helper.plist" "$APP_PATH/Contents/Library/LaunchServices/"
           codesign --force --options runtime --sign - "$APP_PATH/Contents/Library/LaunchServices/TimeMachineTrimmer-helper"
+
+      - name: Test
+        run: |
+          swiftc \
+            -target arm64-apple-macosx14.4 \
+            -sdk "$(xcrun --show-sdk-path)" \
+            Tests/*.swift \
+            -o /tmp/TimeMachineTrimmer-tests \
+            -emit-executable \
+            -O
+          /tmp/TimeMachineTrimmer-tests

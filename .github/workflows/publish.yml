@@ -76,6 +76,17 @@ jobs:
             --force --timestamp \
             "$APP_PATH/Contents/Library/LaunchServices/TimeMachineTrimmer-helper"
 
+      - name: Test
+        run: |
+          swiftc \
+            -target arm64-apple-macosx14.4 \
+            -sdk "$(xcrun --show-sdk-path)" \
+            Tests/*.swift \
+            -o /tmp/TimeMachineTrimmer-tests \
+            -emit-executable \
+            -O
+          /tmp/TimeMachineTrimmer-tests
+
       - name: Sign
         env:
           CODE_SIGN_IDENTITY: ${{ secrets.CODE_SIGN_IDENTITY }}

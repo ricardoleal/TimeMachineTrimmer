@@ -227,6 +227,59 @@ final class BackupViewModel {
         deletionProgress = 0
         deletionLog = []
 
+        // Try helper batch first
+        let helperClient = HelperClient()
+        if await helperClient.isInstalled {
+            do {
+                let results = try await service.deleteBackupsViaHelper(previewBackups)
+                await processHelperResults(results)
+                return
+            } catch {
+                DebugLogger.log(
+                    "executeDeletion: helper failed, falling back to legacy — \(error.localizedDescription)"
+                )
+            }
+        }
+
+        // Fallback: per-backup loop
+        await executeLegacyDeletion()
+    }
+
+    private func processHelperResults(_ results: [String: String]) async {
+        var deleted = 0
+        var failed = 0
+        var errors: [DeletionError] = []
+        var deletedIds: Set<String> = []
+
+        for backup in previewBackups {
+            if let error = results[backup.id], !error.isEmpty {
+                failed += 1
+                DebugLogger.log("executeDeletion: ❌ \(backup.snapshotName ?? backup.id) — \(error)")
+                errors.append(DeletionError(backup: backup, error: error))
+                deletionLog.append("\u{274C} \(backup.dateShortFormatted): \(error)")
+            } else {
+                deleted += 1
+                deletedIds.insert(backup.id)
+                DebugLogger.log("executeDeletion: ✅ \(backup.snapshotName ?? backup.id)")
+                deletionLog.append("\u{2705} \(backup.dateShortFormatted): Deleted")
+            }
+        }
+
+        deletionProgress = 1.0
+        backups.removeAll { deletedIds.contains($0.id) }
+        selectedBackupIds.subtract(deletedIds)
+
+        let result = DeletionResult(
+            deleted: deleted,
+            failed: failed,
+            spaceReclaimed: 0,
+            errors: errors
+        )
+        DebugLogger.log("executeDeletion: done — \(deleted) deleted, \(failed) failed")
+        state = .done(result)
+    }
+
+    private func executeLegacyDeletion() async {
         let total = Double(previewBackups.count)
         var deleted = 0
         var failed = 0

@@ -38,10 +38,11 @@ class HelperDaemon: NSObject, NSXPCListenerDelegate, HelperProtocol {
         reply(helperVersion)
     }
 
-    func deleteBackups(_ backups: [HelperBackup], withReply reply: @escaping ([String: String]) -> Void) {
+    func deleteBackups(_ backups: [[String: String]], withReply reply: @escaping ([String: String]) -> Void) {
         var results: [String: String] = [:]
         for backup in backups {
-            results[backup.id] = deleteSingleBackup(backup) ?? ""
+            let id = backup["id"] ?? "unknown"
+            results[id] = deleteSingleBackup(backup) ?? ""
         }
         reply(results)
     }
@@ -49,37 +50,25 @@ class HelperDaemon: NSObject, NSXPCListenerDelegate, HelperProtocol {
     // MARK: - Deletion Logic
 
     /// Returns nil on success, or an error message string on failure.
-    private func deleteSingleBackup(_ backup: HelperBackup) -> String? {
-        guard !backup.volumePath.isEmpty, !backup.snapshotName.isEmpty else {
+    private func deleteSingleBackup(_ backup: [String: String]) -> String? {
+        guard let volumePath = backup["volumePath"], let snapshotName = backup["snapshotName"],
+              !volumePath.isEmpty, !snapshotName.isEmpty else {
             return "Missing volumePath or snapshotName"
         }
 
-        // Strategy 1: tmutil deletebackups (if path available)
-        if !backup.path.isEmpty {
-            let escapedPath = backup.path.replacingOccurrences(of: "\"", with: "\\\"")
-            if run("/usr/bin/tmutil", args: ["deletebackups", "\"\(escapedPath)\""]) == nil {
-                return nil
-            }
-        }
-
-        // Strategy 2: diskutil apfs deleteSnapshot
-        let datePart = backup.snapshotName
+        let datePart = snapshotName
             .replacingOccurrences(of: "com.apple.TimeMachine.", with: "")
             .replacingOccurrences(of: ".backup", with: "")
-
-        let escapedName = backup.snapshotName.replacingOccurrences(of: "\"", with: "\\\"")
-        let escapedMount = backup.volumePath.replacingOccurrences(of: "\"", with: "\\\"")
 
         // Step A: Find UUID and force unmount
         if let uuid = findSnapshotUUID(datePart: datePart) {
             let snapshotPath = "/Volumes/.timemachine/\(uuid)/\(datePart).backup"
-            let escapedSnapPath = snapshotPath.replacingOccurrences(of: "\"", with: "\\\"")
-            _ = run("/usr/sbin/diskutil", args: ["unmount", "force", "\"\(escapedSnapPath)\""])
+            _ = run("/usr/sbin/diskutil", args: ["unmount", "force", snapshotPath])
         }
 
         // Step B: Delete the snapshot
         let deleteError = run("/usr/sbin/diskutil", args: [
-            "apfs", "deleteSnapshot", "\"\(escapedMount)\"", "-name", "\"\(escapedName)\""
+            "apfs", "deleteSnapshot", volumePath, "-name", snapshotName
         ])
         if let deleteError {
             return deleteError
