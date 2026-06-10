@@ -29,18 +29,26 @@ func testResumptionFlag_secondCallReturnsFalse() {
     assertFalse(flag.tryResume(), "third call returns false")
 }
 
+/// Thread-safe counter for concurrent test verification.
+final class AtomicCounter {
+    private var _value = 0
+    private let lock = NSLock()
+    func increment() { lock.lock(); _value += 1; lock.unlock() }
+    var value: Int { lock.lock(); defer { lock.unlock() }; return _value }
+}
+
 func testResumptionFlag_threadSafety() {
     let flag = ResumptionFlag()
-    var results: [Bool] = []
-    let group = DispatchGroup()
-    for _ in 0..<10 {
-        DispatchQueue.global().async(group: group) {
-            results.append(flag.tryResume())
+    let counter = AtomicCounter()
+    let iterations = 100
+
+    DispatchQueue.concurrentPerform(iterations: iterations) { _ in
+        if flag.tryResume() {
+            counter.increment()
         }
     }
-    group.wait()
-    let trueCount = results.filter { $0 }.count
-    assertEqual(trueCount, 1, "only one succeeds from 10 concurrent threads")
+
+    assertEqual(counter.value, 1, "only one succeeds from \(iterations) concurrent calls")
 }
 
 // ============================================================
