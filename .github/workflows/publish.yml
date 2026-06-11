@@ -14,6 +14,7 @@ env:
 
 jobs:
   build:
+    if: ${{ !contains(github.ref_name, '-dev') }}
     name: Build and Publish Release
     runs-on: macos-latest
     steps:
