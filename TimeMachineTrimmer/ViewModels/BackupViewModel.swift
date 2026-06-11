@@ -92,6 +92,7 @@ final class BackupViewModel {
     var backupPhase: String = ""
     var backupFiles: Int = 0
     var backupTotalFiles: Int = 0
+    var isTrimNowActive: Bool = false
 
     var filteredBackups: [TimeMachineBackup] {
         guard !searchQuery.isEmpty else { return backups }
@@ -280,6 +281,9 @@ final class BackupViewModel {
             errors: errors
         )
         DebugLogger.log("executeDeletion: done — \(deleted) deleted, \(failed) failed")
+        if deleted > 0 {
+            SettingsStore.shared.recordTrim(date: Date(), count: deleted, space: "")
+        }
         state = .done(result)
     }
 
@@ -317,6 +321,9 @@ final class BackupViewModel {
             errors: errors
         )
         DebugLogger.log("executeDeletion: done — \(deleted) deleted, \(failed) failed")
+        if deleted > 0 {
+            SettingsStore.shared.recordTrim(date: Date(), count: deleted, space: "")
+        }
         state = .done(result)
     }
 
@@ -327,6 +334,7 @@ final class BackupViewModel {
         deletionProgress = 0
         deletionLog = []
         isBatchDeletion = false
+        isTrimNowActive = false
     }
 
     func toggleBackupSelection(_ id: String) {
@@ -343,5 +351,42 @@ final class BackupViewModel {
 
     func deselectAllBackups() {
         selectedBackupIds.removeAll()
+    }
+
+    func quickTrimNow(thresholdMonths: Int) async -> DeletionResult? {
+        DebugLogger.log("quickTrimNow: threshold=\(thresholdMonths)")
+        isTrimNowActive = true
+        ageThresholdMonths = thresholdMonths
+        selectedMethod = .age
+
+        if !TMFDAUtils.checkFDA() {
+            needsPermissionSheet = true
+            isTrimNowActive = false
+            return nil
+        }
+
+        await scanBackups()
+        guard state == .scanned else {
+            isTrimNowActive = false
+            return nil
+        }
+
+        updateAgeSelection()
+
+        guard !selectedBackupIds.isEmpty else {
+            DebugLogger.log("quickTrimNow: no backups match threshold")
+            isTrimNowActive = false
+            return nil
+        }
+
+        previewBackups = backups.filter { selectedBackupIds.contains($0.id) }
+        await executeDeletion()
+
+        guard case .done(let result) = state else {
+            isTrimNowActive = false
+            return nil
+        }
+
+        return result
     }
 }

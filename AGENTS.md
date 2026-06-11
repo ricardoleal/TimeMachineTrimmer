@@ -15,12 +15,12 @@ A macOS utility app that deletes Time Machine snapshots. Built with Swift + Swif
 
 ### Key Naming
 
-| Item | Value |
-|---|---|
-| Helper binary | `/usr/local/bin/TimeMachineTrimmer-helper` |
-| Launchd label | `com.ricardoleal.TimeMachineTrimmer.helper` |
-| XPC Mach service | `com.ricardoleal.TimeMachineTrimmerHelper` |
-| Launchd plist | `/Library/LaunchDaemons/com.ricardoleal.TimeMachineTrimmer.helper.plist` |
+| Item             | Value                                                                    |
+| ---------------- | ------------------------------------------------------------------------ |
+| Helper binary    | `/usr/local/bin/TimeMachineTrimmer-helper`                               |
+| Launchd label    | `com.ricardoleal.TimeMachineTrimmer.helper`                              |
+| Launchd plist    | `/Library/LaunchDaemons/com.ricardoleal.TimeMachineTrimmer.helper.plist` |
+| XPC Mach service | `com.ricardoleal.TimeMachineTrimmerHelper`                               |
 
 ## Workflow
 
@@ -71,13 +71,13 @@ A macOS utility app that deletes Time Machine snapshots. Built with Swift + Swif
 
 ## Commands
 
-| Action | Command |
-|---|---|
-| Build app + helper | `.scripts/build.sh` |
-| Build debug only | `.scripts/build_debug.sh` |
-| Lint | `swiftlint --strict` |
-| Run tests | `.scripts/test.sh` |
-| Package DMG | `.scripts/package_dmg.sh` |
+| Action             | Command                   |
+| ------------------ | ------------------------- |
+| Build app + helper | `.scripts/build.sh`       |
+| Build debug only   | `.scripts/build_debug.sh` |
+| Lint               | `swiftlint --strict`      |
+| Package DMG        | `.scripts/package_dmg.sh` |
+| Run tests          | `.scripts/test.sh`        |
 
 ### Build requirements
 
@@ -113,6 +113,7 @@ Tests/
 - Privileged helper compiles `HelperProtocol.swift` from the **app source directory** (`$SRC_DIR/Services/HelperProtocol.swift`), not from `PrivilegedHelper/`
 - When adding new Swift source files to the app target, update both `build.sh` (which globs `find "$SRC_DIR" -name "*.swift"`) AND `project.pbxproj`
 - `AGENTS.md`, `.github/`, `.scripts/`, `build/`, `Tests/TEST-RESULTS.md` are documentation/infrastructure — do not reference in production code
+- **Menu bar icon uses AppKit `NSStatusItem`** (via `MenuBarManager.swift`) — SwiftUI `MenuBarExtra(.menu)` does not render dropdown items on macOS 26.5.1 Tahoe. Do NOT use SwiftUI `MenuBarExtra` for the menu bar.
 
 ## Before Submitting Changes
 

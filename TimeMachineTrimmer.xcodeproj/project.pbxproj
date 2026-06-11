@@ -29,6 +29,11 @@
 		AA0000030000000300000003 /* Services/DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000030000000300000003 /* Services/DebugLogger.swift */; };
 		CCDD000200000002CCDD0002 /* Services/HelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */; };
 		DDCC000200000002DDCC0002 /* Services/HelperClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDCC000100000001DDCC0001 /* Services/HelperClient.swift */; };
+		BB1122334455667788990022 /* Services/MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122334455667788990011 /* Services/MenuBarManager.swift */; };
+		CC1122334455667788990033 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1122334455667788990044 /* AppDelegate.swift */; };
+		EE0000010000000100000001 /* Models/SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000010000000100000001 /* Models/SettingsStore.swift */; };
+		EE0000020000000200000002 /* Views/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000020000000200000002 /* Views/SettingsView.swift */; };
+		EE0000030000000300000003 /* Views/TrimNowSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000030000000300000003 /* Views/TrimNowSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +61,11 @@
 		BB0000030000000300000003 /* Services/DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DebugLogger.swift; sourceTree = "<group>"; };
 		CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HelperProtocol.swift; sourceTree = "<group>"; };
 		DDCC000100000001DDCC0001 /* Services/HelperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HelperClient.swift; sourceTree = "<group>"; };
+		AA1122334455667788990011 /* Services/MenuBarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/MenuBarManager.swift; sourceTree = "<group>"; };
+		DD1122334455667788990044 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		FF0000010000000100000001 /* Models/SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/SettingsStore.swift; sourceTree = "<group>"; };
+		FF0000020000000200000002 /* Views/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SettingsView.swift; sourceTree = "<group>"; };
+		FF0000030000000300000003 /* Views/TrimNowSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/TrimNowSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,6 +108,8 @@
 				BB0000030000000300000003 /* Services/DebugLogger.swift */,
 				CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */,
 				DDCC000100000001DDCC0001 /* Services/HelperClient.swift */,
+				AA1122334455667788990011 /* Services/MenuBarManager.swift */,
+				DD1122334455667788990044 /* AppDelegate.swift */,
 				9A3B9BFD05E949DF91F693B8 /* ViewModels/BackupViewModel.swift */,
 				00B58925DE984C63BC5D63C1 /* Views/ContentView.swift */,
 				53FD8317951843FCB8E9C82E /* Views/PermissionView.swift */,
@@ -108,9 +120,12 @@
 				2D77DA54FBEF469B9E099014 /* Views/PreviewSheet.swift */,
 				64636D63414C4C4F8CAC5F49 /* Views/ProgressSheet.swift */,
 				1195F9D461674DCE948AC54C /* Views/ResultSheet.swift */,
+				FF0000020000000200000002 /* Views/SettingsView.swift */,
+				FF0000030000000300000003 /* Views/TrimNowSheet.swift */,
 				C1C358C4EF954CC991B4E0DD /* Info.plist */,
 				AABBCCDDEEFF001122334455 /* Assets.xcassets */,
 				EB96D981D6ED428193FCD0CB /* Models/ByteCountFormatter+Extensions.swift */,
+				FF0000010000000100000001 /* Models/SettingsStore.swift */,
 			);
 			path = TimeMachineTrimmer;
 			sourceTree = "<group>";
@@ -188,6 +203,8 @@
 				AA0000030000000300000003 /* Services/DebugLogger.swift in Sources */,
 				CCDD000200000002CCDD0002 /* Services/HelperProtocol.swift in Sources */,
 				DDCC000200000002DDCC0002 /* Services/HelperClient.swift in Sources */,
+				BB1122334455667788990022 /* Services/MenuBarManager.swift in Sources */,
+				CC1122334455667788990033 /* AppDelegate.swift in Sources */,
 				81F482A0E7DC4C5C8C080844 /* ViewModels/BackupViewModel.swift in Sources */,
 				7AE899A990904A9287860C99 /* Views/ContentView.swift in Sources */,
 				2B4E9F7998E241A89D8AADD9 /* Views/PermissionView.swift in Sources */,
@@ -199,6 +216,9 @@
 				272F311BCD4A46C58A35C073 /* Views/ProgressSheet.swift in Sources */,
 				C5107FBC43AD4904A679E94A /* Views/ResultSheet.swift in Sources */,
 				8720A2E0A490428DAED0AD5E /* Models/ByteCountFormatter+Extensions.swift in Sources */,
+				EE0000010000000100000001 /* Models/SettingsStore.swift in Sources */,
+				EE0000020000000200000002 /* Views/SettingsView.swift in Sources */,
+				EE0000030000000300000003 /* Views/TrimNowSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

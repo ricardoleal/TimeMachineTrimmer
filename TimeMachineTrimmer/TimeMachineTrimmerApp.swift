@@ -2,10 +2,12 @@ import SwiftUI
 
 @main
 struct TimeMachineTrimmerApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var viewModel = BackupViewModel()
+    private let menuBarManager = MenuBarManager()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environment(viewModel)
                 .frame(minWidth: 720, minHeight: 520)
@@ -42,5 +44,37 @@ struct TimeMachineTrimmerApp: App {
                 .disabled(viewModel.state != .scanned)
             }
         }
+        .onChange(of: true) { _, _ in }
+    }
+
+    init() {
+        menuBarManager.setup(
+            onScan: {
+                NSApp.unhide(nil)
+                NSApp.activate()
+                WindowSetup.mainWindow?.makeKeyAndOrderFront(nil)
+                NotificationCenter.default.post(name: NSNotification.Name("menuBarScan"), object: nil)
+            },
+            onShowWindow: {
+                NSApp.unhide(nil)
+                NSApp.activate()
+                WindowSetup.mainWindow?.makeKeyAndOrderFront(nil)
+            },
+            onTrimNow: {
+                NSApp.unhide(nil)
+                NSApp.activate()
+                WindowSetup.mainWindow?.makeKeyAndOrderFront(nil)
+                NotificationCenter.default.post(name: NSNotification.Name("menuBarTrimNow"), object: nil)
+            },
+            onSettings: {
+                NSApp.unhide(nil)
+                NSApp.activate()
+                WindowSetup.mainWindow?.makeKeyAndOrderFront(nil)
+                NotificationCenter.default.post(name: NSNotification.Name("menuBarOpenSettings"), object: nil)
+            },
+            onQuit: {
+                NSApp.terminate(nil)
+            }
+        )
     }
 }
