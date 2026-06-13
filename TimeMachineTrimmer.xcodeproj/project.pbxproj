@@ -30,6 +30,7 @@
 		CCDD000200000002CCDD0002 /* Services/HelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */; };
 		DDCC000200000002DDCC0002 /* Services/HelperClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDCC000100000001DDCC0001 /* Services/HelperClient.swift */; };
 		BB1122334455667788990022 /* Services/MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122334455667788990011 /* Services/MenuBarManager.swift */; };
+		EE0000050000000500000005 /* Services/AutoTrimService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000050000000500000005 /* Services/AutoTrimService.swift */; };
 		CC1122334455667788990033 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1122334455667788990044 /* AppDelegate.swift */; };
 		EE0000010000000100000001 /* Models/SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000010000000100000001 /* Models/SettingsStore.swift */; };
 		EE0000020000000200000002 /* Views/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000020000000200000002 /* Views/SettingsView.swift */; };
@@ -62,6 +63,7 @@
 		CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HelperProtocol.swift; sourceTree = "<group>"; };
 		DDCC000100000001DDCC0001 /* Services/HelperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HelperClient.swift; sourceTree = "<group>"; };
 		AA1122334455667788990011 /* Services/MenuBarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/MenuBarManager.swift; sourceTree = "<group>"; };
+		FF0000050000000500000005 /* Services/AutoTrimService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/AutoTrimService.swift; sourceTree = "<group>"; };
 		DD1122334455667788990044 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FF0000010000000100000001 /* Models/SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/SettingsStore.swift; sourceTree = "<group>"; };
 		FF0000020000000200000002 /* Views/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SettingsView.swift; sourceTree = "<group>"; };
@@ -109,6 +111,7 @@
 				CCDD000100000001CCDD0001 /* Services/HelperProtocol.swift */,
 				DDCC000100000001DDCC0001 /* Services/HelperClient.swift */,
 				AA1122334455667788990011 /* Services/MenuBarManager.swift */,
+				FF0000050000000500000005 /* Services/AutoTrimService.swift */,
 				DD1122334455667788990044 /* AppDelegate.swift */,
 				9A3B9BFD05E949DF91F693B8 /* ViewModels/BackupViewModel.swift */,
 				00B58925DE984C63BC5D63C1 /* Views/ContentView.swift */,
@@ -204,6 +207,7 @@
 				CCDD000200000002CCDD0002 /* Services/HelperProtocol.swift in Sources */,
 				DDCC000200000002DDCC0002 /* Services/HelperClient.swift in Sources */,
 				BB1122334455667788990022 /* Services/MenuBarManager.swift in Sources */,
+				EE0000050000000500000005 /* Services/AutoTrimService.swift in Sources */,
 				CC1122334455667788990033 /* AppDelegate.swift in Sources */,
 				81F482A0E7DC4C5C8C080844 /* ViewModels/BackupViewModel.swift in Sources */,
 				7AE899A990904A9287860C99 /* Views/ContentView.swift in Sources */,

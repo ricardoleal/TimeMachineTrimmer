@@ -101,6 +101,9 @@ struct WindowSetup: NSViewRepresentable {
                 window.isReleasedWhenClosed = false
                 window.delegate = Self.closeDelegate
                 Self.mainWindow = window
+                if !SettingsStore.shared.showWindowOnLaunch {
+                    window.orderOut(nil)
+                }
             }
         }
         return view

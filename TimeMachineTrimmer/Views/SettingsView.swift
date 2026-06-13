@@ -1,71 +1,210 @@
 import SwiftUI
 
+private enum SettingsTab: String, CaseIterable {
+    case trim = "Trim"
+    case autoTrim = "Auto Trim"
+    case helper = "Helper"
+    case general = "General"
+
+    var icon: String {
+        switch self {
+        case .trim: "scissors"
+        case .autoTrim: "clock.arrow.2.circlepath"
+        case .helper: "shield.lefthalf.filled"
+        case .general: "gearshape"
+        }
+    }
+}
+
 struct SettingsView: View {
-    @State private var settings = SettingsStore.shared
+    @Environment(\.dismiss) private var dismiss
+    @Bindable private var settings = SettingsStore.shared
     @State private var helperStatus: String = "Checking..."
     @State private var showClearConfirm = false
+    @State private var selectedTab: SettingsTab = .trim
 
-    private let formatter: ByteCountFormatter = {
-        let fmt = ByteCountFormatter()
-        fmt.countStyle = .file
-        return fmt
-    }()
+    private func clampedValue(_ value: Int, to unit: TrimUnit) -> Int {
+        min(max(value, 1), unit.maxValue)
+    }
 
     var body: some View {
-        TabView {
-            trimDefaultsTab
-                .tabItem { Label("Trim", systemImage: "scissors") }
-
-            helperTab
-                .tabItem { Label("Helper", systemImage: "shield.lefthalf.filled") }
-
-            generalTab
-                .tabItem { Label("General", systemImage: "gearshape") }
+        VStack(spacing: 0) {
+            topBar
+            segmentPicker
+            tabContent
         }
-        .frame(width: 480, height: 340)
+        .frame(width: 480, height: 460)
         .onAppear { checkHelper() }
+    }
+
+    private var topBar: some View {
+        HStack {
+            Text("Settings")
+                .font(.headline)
+            Spacer()
+            Button(
+                action: { dismiss() },
+                label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+            )
+            .buttonStyle(.plain)
+            .keyboardShortcut(.escape)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+    }
+
+    private var segmentPicker: some View {
+        Picker("", selection: $selectedTab) {
+            ForEach(SettingsTab.allCases, id: \.self) { tab in
+                Label(tab.rawValue, systemImage: tab.icon).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        ScrollView {
+            Group {
+                switch selectedTab {
+                case .trim: trimDefaultsTab
+                case .autoTrim: autoTrimTab
+                case .helper: helperTab
+                case .general: generalTab
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - Trim Defaults
 
     private var trimDefaultsTab: some View {
-        Form {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Age threshold:")
-                        Spacer()
-                        Text("\(settings.ageThresholdMonths) months")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
+        VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                Picker("", selection: $settings.trimThresholdUnit) {
+                    ForEach(TrimUnit.allCases, id: \.self) { unit in
+                        Text(unit.rawValue).tag(unit)
                     }
-                    Slider(value: Binding(
-                        get: { Double(settings.ageThresholdMonths) },
-                        set: { settings.ageThresholdMonths = Int($0) }
-                    ), in: 1...24, step: 1)
-                    Text("\"Trim Now\" will delete snapshots older than this.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
                 }
-                .padding(.vertical, 4)
-            } header: {
-                Label("Quick Trim Defaults", systemImage: "clock")
+                .pickerStyle(.segmented)
+
+                HStack(spacing: 8) {
+                    TextField("", value: $settings.trimThresholdValue, format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 64)
+                        .id(settings.trimThresholdValue)
+                        .onSubmit {
+                            settings.trimThresholdValue = clampedValue(
+                                settings.trimThresholdValue, to: settings.trimThresholdUnit
+                            )
+                        }
+                    Stepper(
+                        "Value",
+                        value: $settings.trimThresholdValue,
+                        in: 1...settings.trimThresholdUnit.maxValue
+                    )
+                    .labelsHidden()
+                }
+                Text("\"Trim Now\" will delete snapshots older than this.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(12)
+            .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 20)
+
+            Toggle("Show notification when trim completes", isOn: $settings.trimNotifyOnComplete)
+                .padding(12)
+                .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal, 20)
+        }
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Auto Trim
+
+    private var autoTrimTab: some View {
+        VStack(spacing: 20) {
+            Toggle("Enable automatic trimming", isOn: $settings.autoTrimEnabled)
+                .padding(12)
+                .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal, 20)
+
+            if settings.autoTrimEnabled {
+                VStack(alignment: .leading, spacing: 8) {
+                    Picker("", selection: $settings.autoTrimThresholdUnit) {
+                        ForEach(TrimUnit.allCases, id: \.self) { unit in
+                            Text(unit.rawValue).tag(unit)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    HStack(spacing: 8) {
+                        TextField("", value: $settings.autoTrimThresholdValue, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 64)
+                            .id(settings.autoTrimThresholdValue)
+                            .onSubmit {
+                                settings.autoTrimThresholdValue = clampedValue(
+                                    settings.autoTrimThresholdValue, to: settings.autoTrimThresholdUnit
+                                )
+                            }
+                        Stepper(
+                            "Value",
+                            value: $settings.autoTrimThresholdValue,
+                            in: 1...settings.autoTrimThresholdUnit.maxValue
+                        )
+                        .labelsHidden()
+                    }
+                }
+                .padding(12)
+                .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal, 20)
             }
 
-            Section {
-                Toggle("Show notification when trim completes", isOn: $settings.trimNotifyOnComplete)
-            } header: {
-                Label("Notifications", systemImage: "bell")
+            VStack(alignment: .leading, spacing: 6) {
+                if let date = settings.autoTrimLastRun {
+                    HStack {
+                        Text("Last run:")
+                        Spacer()
+                        Text(date.formatted(date: .long, time: .shortened))
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Text("Result:")
+                        Spacer()
+                        Text(settings.autoTrimResult)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text("Not yet run.")
+                        .foregroundStyle(.secondary)
+                }
+                Divider()
+                Button("Run Now") {
+                    Task { await AutoTrimService.shared.runNow() }
+                }
+                .disabled(!settings.autoTrimEnabled)
             }
+            .padding(12)
+            .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 20)
         }
-        .formStyle(.grouped)
+        .padding(.vertical, 4)
     }
 
     // MARK: - Helper
 
     private var helperTab: some View {
-        Form {
-            Section {
+        VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("Status:")
                     Text(helperStatus)
@@ -81,31 +220,30 @@ struct SettingsView: View {
                         installHelper()
                     }
                 }
-            } header: {
-                Label("Privileged Helper", systemImage: "shield.lefthalf.filled")
-            }
 
-            Section {
                 Text("The helper runs as root and performs backup deletion. "
                      + "It is installed via an admin-privileged script.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(3)
             }
+            .padding(12)
+            .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 20)
         }
-        .formStyle(.grouped)
+        .padding(.vertical, 4)
     }
 
     // MARK: - General
 
     private var generalTab: some View {
-        Form {
-            Section {
-                Toggle("Show main window on launch", isOn: $settings.showWindowOnLaunch)
-            } header: {
-                Label("Launch Behavior", systemImage: "power")
-            }
+        VStack(spacing: 20) {
+            Toggle("Show main window on launch", isOn: $settings.showWindowOnLaunch)
+                .padding(12)
+                .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal, 20)
 
-            Section {
+            VStack(alignment: .leading, spacing: 6) {
                 if let date = settings.lastTrimDate {
                     HStack {
                         Text("Last trim:")
@@ -119,6 +257,7 @@ struct SettingsView: View {
                         Text(settings.lastTrimSummary)
                             .foregroundStyle(.secondary)
                     }
+                    Divider()
                     Button("Clear History", role: .destructive) {
                         showClearConfirm = true
                     }
@@ -135,11 +274,12 @@ struct SettingsView: View {
                     Text("No trim history recorded yet.")
                         .foregroundStyle(.secondary)
                 }
-            } header: {
-                Label("Trim History", systemImage: "clock.arrow.circlepath")
             }
+            .padding(12)
+            .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 20)
         }
-        .formStyle(.grouped)
+        .padding(.vertical, 4)
     }
 
     // MARK: - Helper Actions
@@ -147,46 +287,31 @@ struct SettingsView: View {
     private func checkHelper() {
         Task {
             let client = HelperClient()
-            helperStatus = await client.isInstalled ? "Installed" : "Not installed"
+            helperStatus = client.isInstalled ? "Installed" : "Not installed"
         }
     }
 
     private func installHelper() {
-        let scriptPath = ".scripts/install_helper.sh"
-        let fullPath = (FileManager.default.currentDirectoryPath as NSString).appendingPathComponent(scriptPath)
-        guard FileManager.default.fileExists(atPath: fullPath) else {
-            helperStatus = "Script not found: \(scriptPath)"
-            return
+        Task {
+            let client = HelperClient()
+            do {
+                try await client.ensureInstalled()
+                helperStatus = "Installed"
+            } catch {
+                helperStatus = "Install failed: \(error.localizedDescription)"
+            }
         }
-        let process = Process()
-        process.launchPath = "/bin/bash"
-        process.arguments = [fullPath]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        process.launch()
-        process.waitUntilExit()
-        helperStatus = process.terminationStatus == 0 ? "Installed" : "Install failed"
     }
 
     private func uninstallHelper() {
-        let scriptPath = ".scripts/uninstall_helper.sh"
-        let fullPath = (FileManager.default.currentDirectoryPath as NSString).appendingPathComponent(scriptPath)
-        if FileManager.default.fileExists(atPath: fullPath) {
-            let process = Process()
-            process.launchPath = "/bin/bash"
-            process.arguments = [fullPath]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            process.launch()
-            process.waitUntilExit()
-            helperStatus = process.terminationStatus == 0 ? "Not installed" : "Uninstall failed"
-        } else {
-            // Fallback via osascript
-            // swiftlint:disable:next line_length
-            let script = "do shell script \"launchctl unload /Library/LaunchDaemons/com.ricardoleal.TimeMachineTrimmer.helper.plist; rm -f /usr/local/bin/TimeMachineTrimmer-helper /Library/LaunchDaemons/com.ricardoleal.TimeMachineTrimmer.helper.plist\" with administrator privileges"
-            var error: NSDictionary?
-            NSAppleScript(source: script)?.executeAndReturnError(&error)
-            helperStatus = "Not installed"
+        Task {
+            let client = HelperClient()
+            do {
+                try client.uninstall()
+                helperStatus = "Not installed"
+            } catch {
+                helperStatus = "Uninstall failed: \(error.localizedDescription)"
+            }
         }
     }
 }
