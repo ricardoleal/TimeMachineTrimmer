@@ -25,7 +25,7 @@ actor HelperClient {
 
     // MARK: - Installation Check
 
-    var isInstalled: Bool {
+    nonisolated var isInstalled: Bool {
         FileManager.default.fileExists(atPath: helperBinary)
             && FileManager.default.fileExists(atPath: helperPlist)
     }
@@ -71,6 +71,38 @@ actor HelperClient {
                 throw TMUtilTypes.TMError.processFailed("Installation cancelled by user")
             }
             throw TMUtilTypes.TMError.processFailed("Helper installation failed: \(errMsg)")
+        }
+    }
+
+    // MARK: - Uninstall
+
+    nonisolated func uninstall() throws {
+        let script = """
+        launchctl bootout system "\(helperPlist)" 2>/dev/null || true
+        rm -f "\(helperBinary)" "\(helperPlist)"
+        """
+
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        task.arguments = [
+            "-e",
+            "do shell script \"\(script.replacingOccurrences(of: "\"", with: "\\\""))\" with administrator privileges"
+        ]
+
+        let errPipe = Pipe()
+        task.standardError = errPipe
+
+        try task.run()
+        task.waitUntilExit()
+
+        guard task.terminationStatus == 0 else {
+            let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+            let errMsg = String(data: errData, encoding: .utf8) ?? "Unknown error"
+            if errMsg.localizedCaseInsensitiveContains("cancelled")
+                || errMsg.localizedCaseInsensitiveContains("(-128)") {
+                throw TMUtilTypes.TMError.processFailed("Uninstallation cancelled by user")
+            }
+            throw TMUtilTypes.TMError.processFailed("Helper uninstallation failed: \(errMsg)")
         }
     }
 

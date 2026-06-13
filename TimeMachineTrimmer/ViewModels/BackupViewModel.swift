@@ -76,7 +76,10 @@ final class BackupViewModel {
     var selectedMethod: TrimMethod = .age {
         didSet { if selectedMethod == .age { updateAgeSelection() } }
     }
-    var ageThresholdMonths: Int = 6 {
+    var trimThresholdValue: Int = SettingsStore.shared.trimThresholdValue {
+        didSet { if selectedMethod == .age { updateAgeSelection() } }
+    }
+    var trimThresholdUnit: TrimUnit = SettingsStore.shared.trimThresholdUnit {
         didSet { if selectedMethod == .age { updateAgeSelection() } }
     }
     var previewBackups: [TimeMachineBackup] = []
@@ -215,11 +218,7 @@ final class BackupViewModel {
     }
 
     func updateAgeSelection() {
-        let cutoff = Calendar.current.date(
-            byAdding: .month,
-            value: -ageThresholdMonths,
-            to: Date()
-        ) ?? Date()
+        let cutoff = trimThresholdUnit.cutoffDate(byAdding: trimThresholdValue)
         selectedBackupIds = Set(backups.filter { $0.date < cutoff }.map(\.id))
     }
 
@@ -231,7 +230,7 @@ final class BackupViewModel {
 
         // Try helper batch first
         let helperClient = HelperClient()
-        if await helperClient.isInstalled {
+        if helperClient.isInstalled {
             isBatchDeletion = true
             deletionLog.append("Sending \(previewBackups.count) backup(s) to privileged helper...")
             do {
@@ -353,10 +352,52 @@ final class BackupViewModel {
         selectedBackupIds.removeAll()
     }
 
-    func quickTrimNow(thresholdMonths: Int) async -> DeletionResult? {
-        DebugLogger.log("quickTrimNow: threshold=\(thresholdMonths)")
+    func prepareTrimNow(value: Int, unit: TrimUnit) async -> Int? {
+        DebugLogger.log("prepareTrimNow: value=\(value) unit=\(unit.rawValue)")
         isTrimNowActive = true
-        ageThresholdMonths = thresholdMonths
+        trimThresholdValue = value
+        trimThresholdUnit = unit
+        selectedMethod = .age
+
+        if !TMFDAUtils.checkFDA() {
+            needsPermissionSheet = true
+            isTrimNowActive = false
+            return nil
+        }
+
+        await scanBackups()
+        guard state == .scanned else {
+            isTrimNowActive = false
+            return nil
+        }
+
+        updateAgeSelection()
+
+        guard !selectedBackupIds.isEmpty else {
+            DebugLogger.log("prepareTrimNow: no backups match threshold")
+            isTrimNowActive = false
+            return nil
+        }
+
+        previewBackups = backups.filter { selectedBackupIds.contains($0.id) }
+        return previewBackups.count
+    }
+
+    func confirmedTrimNow() async -> DeletionResult? {
+        guard !previewBackups.isEmpty else { return nil }
+        await executeDeletion()
+        guard case .done(let result) = state else {
+            isTrimNowActive = false
+            return nil
+        }
+        return result
+    }
+
+    func quickTrimNow(value: Int, unit: TrimUnit) async -> DeletionResult? {
+        DebugLogger.log("quickTrimNow: value=\(value) unit=\(unit.rawValue)")
+        isTrimNowActive = true
+        trimThresholdValue = value
+        trimThresholdUnit = unit
         selectedMethod = .age
 
         if !TMFDAUtils.checkFDA() {
